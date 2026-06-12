@@ -7,7 +7,7 @@ import { useDrivers } from "./hooks/useDrivers";
 import { DriverDetailSheet } from "./DriverDetailSheet";
 import { ViewShipmentSheet } from "../shipments/ViewShipmentSheet";
 
-const API_BASE_URL = "http://localhost:5000/api/drivers";
+const API_BASE_URL = (import.meta.env?.VITE_API_URL || "http://localhost:5000/api") + "/drivers";
 
 export function DriversPage() {
   const { drivers, loading, fetchDrivers } = useDrivers();

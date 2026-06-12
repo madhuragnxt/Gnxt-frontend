@@ -76,7 +76,7 @@ export function ReportsPage() {
   useEffect(() => {
     async function fetchFilters() {
       try {
-        const res = await fetch("http://localhost:5000/api/reports/filters");
+        const res = await fetch(`${import.meta.env?.VITE_API_URL || "http://localhost:5000/api"}/reports/filters`);
         const json = await res.json();
         if (json.success) setFilterOptions(json.data);
       } catch (err) {
@@ -99,7 +99,7 @@ export function ReportsPage() {
           groupBy,
         }).toString();
 
-        const res = await fetch(`http://localhost:5000/api/reports/stats?${query}`);
+        const res = await fetch(`${import.meta.env?.VITE_API_URL || "http://localhost:5000/api"}/reports/stats?${query}`);
         const json = await res.json();
         if (json.success) {
           setStats(json.data.stats || {

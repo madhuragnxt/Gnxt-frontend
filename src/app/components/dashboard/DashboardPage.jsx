@@ -10,7 +10,7 @@ import { ViewShipmentSheet } from "../shipments/ViewShipmentSheet";
 import { getPODConfig } from "../shipments/utils/shipmentStyles";
 
 // We'll use our API base URL
-const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL = import.meta.env?.VITE_API_URL || "http://localhost:5000/api";
 
 export function DashboardPage() {
   const [activeStatView, setActiveStatView] = useState(null);

@@ -9,7 +9,7 @@ import { TripFiltersBar } from "./TripFiltersBar";
 import { TripTable } from "./TripTable";
 import { statusStyles } from "./data/tripData";
 
-const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL = import.meta.env?.VITE_API_URL || "http://localhost:5000/api";
 
 export function TripTrackingPage() {
   const navigate = useNavigate();

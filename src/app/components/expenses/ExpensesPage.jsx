@@ -47,11 +47,11 @@ export function ExpensesPage() {
     try {
       setLoading(true);
       const [expRes, shipRes] = await Promise.all([
-        fetch("http://localhost:5000/api/expenses").catch(err => {
+        fetch(`${import.meta.env?.VITE_API_URL || "http://localhost:5000/api"}/expenses`).catch(err => {
           console.error("Failed fetching expenses:", err);
           return { ok: false };
         }),
-        fetch("http://localhost:5000/api/shipments?limit=1000").catch(err => {
+        fetch(`${import.meta.env?.VITE_API_URL || "http://localhost:5000/api"}/shipments?limit=1000`).catch(err => {
           console.error("Failed fetching shipments:", err);
           return { ok: false };
         })
@@ -337,7 +337,7 @@ export function ExpensesPage() {
 
   const addExpense = async (newExpense) => {
     try {
-      const response = await fetch("http://localhost:5000/api/expenses", {
+      const response = await fetch(`${import.meta.env?.VITE_API_URL || "http://localhost:5000/api"}/expenses`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -362,7 +362,7 @@ export function ExpensesPage() {
 
   const updateExpense = async (id, payload) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/expenses/${id}`, {
+      const response = await fetch(`${import.meta.env?.VITE_API_URL || "http://localhost:5000/api"}/expenses/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -378,7 +378,7 @@ export function ExpensesPage() {
 
   const deleteExpense = async (id) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/expenses/${id}`, {
+      const response = await fetch(`${import.meta.env?.VITE_API_URL || "http://localhost:5000/api"}/expenses/${id}`, {
         method: "DELETE",
       });
       if (!response.ok) throw new Error("Failed to delete expense");

@@ -6,7 +6,7 @@ import VehicleFiltersBar from "./VehicleFiltersBar";
 import VehicleTable from "./VehicleTable";
 import AddVehicleSheet from "./AddVehicleSheet";
 
-const API_BASE_URL = "http://localhost:5000/api/vehicles";
+const API_BASE_URL = (import.meta.env?.VITE_API_URL || "http://localhost:5000/api") + "/vehicles";
 
 export function VehiclesPage() {
   const [searchQuery, setSearchQuery] = useState("");

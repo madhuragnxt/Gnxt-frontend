@@ -127,7 +127,7 @@ export function ViewExpenseDialog({ expense, onClose }) {
               <Button
                 variant="outline"
                 className="w-full justify-between h-10 text-xs border-dashed border-border hover:text-[#1d4ed8] hover:border-[#1d4ed8]/30 group"
-                onClick={() => window.open(`http://localhost:5000${expense.receiptUrl}`, "_blank")}
+                onClick={() => window.open(`${(import.meta.env?.VITE_API_URL || "http://localhost:5000/api").replace("/api", "")}${expense.receiptUrl}`, "_blank")}
               >
                 <div className="flex items-center gap-2">
                   <FileText className="w-3.5 h-3.5 text-muted-foreground group-hover:text-[#1d4ed8]" />
