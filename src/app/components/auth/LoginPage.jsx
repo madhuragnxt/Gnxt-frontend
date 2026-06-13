@@ -105,15 +105,6 @@ export function LoginPage() {
               {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Signing in…</> : "Sign In"}
             </button>
           </form>
-
-          {/* Default credentials hint */}
-          <div className="mt-6 p-4 bg-white/5 border border-white/10 rounded-xl">
-            <p className="text-[11px] text-white/40 text-center uppercase tracking-wider mb-2">Default Credentials</p>
-            <div className="flex justify-center gap-6 text-xs text-white/60">
-              <span>Username: <span className="text-white/80">admin</span></span>
-              <span>Password: <span className="text-white/80">Admin@2026</span></span>
-            </div>
-          </div>
         </div>
       </div>
     </div>
