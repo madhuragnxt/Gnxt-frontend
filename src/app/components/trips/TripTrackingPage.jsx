@@ -27,6 +27,13 @@ export function TripTrackingPage() {
     fetchTripData();
   }, []);
 
+  // Silent refresh on cache updates
+  useEffect(() => {
+    const handler = () => fetchTripData();
+    window.addEventListener("api-cache-updated", handler);
+    return () => window.removeEventListener("api-cache-updated", handler);
+  }, []);
+
   const fetchTripData = async () => {
     setLoading(true);
     try {
@@ -48,16 +55,16 @@ export function TripTrackingPage() {
 
   const getCombinedVehicles = () => {
     return vehicles.map(vehicle => {
-      // Find active shipment for this vehicle (active until Closed or Cancelled)
+      // Find active shipment: not cancelled, and (not closed OR closed without returnedDate)
       const activeShipment = shipments.find(
-        s => s.vehicleNumber === vehicle.vehicleNo && s.status !== "Closed" && s.status !== "Cancelled"
+        s => s.vehicleNumber === vehicle.vehicleNo && s.status !== "Cancelled" && !(s.status === "Closed" && s.returnedDate)
       );
 
       // Find GPS location for this vehicle
       const gps = gpsLocations.find(g => g.vehicleNo === vehicle.vehicleNo);
 
       const isDispatched = activeShipment?.status === "In Transit";
-      const isReturning = activeShipment?.status === "Closed";
+      const isReturning = activeShipment?.status === "Delivered" || (activeShipment?.status === "Closed" && !activeShipment?.returnedDate);
 
       let finalStatus = "Idle";
       if (activeShipment) {
@@ -115,6 +122,7 @@ export function TripTrackingPage() {
     try {
       const res = await axios.patch(`${API_BASE_URL}/shipments/${shipmentDbId}/status`, {
         status: "Closed",
+        returnedDate: new Date().toISOString(),
       });
       if (res.data?.success) {
         // Refresh tracking data to reflect freed vehicle/driver

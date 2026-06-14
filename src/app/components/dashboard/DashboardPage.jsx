@@ -34,8 +34,15 @@ export function DashboardPage() {
     fetchDashboardData();
   }, []);
 
-  const fetchDashboardData = async () => {
-    setLoading(true);
+  // Listen for api-cache-updated events to do silent refresh
+  useEffect(() => {
+    const handler = () => fetchDashboardData(true);
+    window.addEventListener("api-cache-updated", handler);
+    return () => window.removeEventListener("api-cache-updated", handler);
+  }, []);
+
+  const fetchDashboardData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [statsRes, weeklyRes, shipmentsRes, invoicesRes, cancelledInvoicesRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/dashboard/stats`).catch(() => ({ data: { success: false } })),
@@ -87,6 +94,8 @@ export function DashboardPage() {
     vehicle: s.vehicleNumber || "Unknown",
     driver: s.driverName || "Unknown",
     destination: s.destinations?.[0]?.customerName || s.destinations?.[0]?.deliveryLocation || "Unknown",
+    customer: s.destinations?.[0]?.customerName || "Unknown",
+    location: s.destinations?.[0]?.deliveryLocation || "—",
     status: s.status,
     progress: s.status === "Delivered" ? 100 : (s.status === "In Transit" ? 60 : 10),
     eta: s.deliveryDate ? format(new Date(s.deliveryDate), "MMM d, yyyy h:mm a") : "Pending",
@@ -122,7 +131,11 @@ export function DashboardPage() {
       const isCorrectStatus = ["Delivered", "Closed"].includes(s.status);
       const deliveryDate = new Date(s.originalData.deliveryDate || s.originalDate).toDateString();
       return isCorrectStatus && deliveryDate === todayStr;
-    });
+    }).map(s => ({
+      ...s,
+      customer: s.originalData?.destinations?.[0]?.customerName || s.customer,
+      location: s.originalData?.destinations?.[0]?.deliveryLocation || s.location,
+    }));
   } else if (activeStatView) {
     baseData = showHistory ? historicalShipments : currentShipments;
   }

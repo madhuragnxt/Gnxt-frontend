@@ -27,7 +27,7 @@ export function PlantRow({ plant, onDeleted, onStatusUpdated, canEdit, canDelete
   const rest = invoices.slice(1);
 
   const isPendingDelayed =
-    plant.status === "Pending" &&
+    first?.status === "Pending" &&
     plant.createdAt &&
     Date.now() - new Date(plant.createdAt).getTime() > 24 * 60 * 60 * 1000;
 
@@ -67,7 +67,6 @@ export function PlantRow({ plant, onDeleted, onStatusUpdated, canEdit, canDelete
           </span>
         </TableCell>
 
-        {/* Location */}
         <TableCell>
           <span className="text-sm text-muted-foreground">
             {plant.location || "—"}
@@ -89,15 +88,16 @@ export function PlantRow({ plant, onDeleted, onStatusUpdated, canEdit, canDelete
         </TableCell>
 
         <TableCell>
-          <StatusBadge status={plant.status} isDelayed={isPendingDelayed} />
+          <StatusBadge status={first?.status || plant.status} isDelayed={isPendingDelayed} />
         </TableCell>
 
         <TableCell onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center gap-3">
-            {canEdit && first && (
+            {canEdit && first && first.status !== "Cancelled" && (
               <CancelButton
-                plantNumber={plant.plantNumber}
-                currentStatus={plant.status}
+                invoiceId={first._id}
+                invoiceNumber={first.invoiceNumber}
+                currentStatus={first.status}
                 onStatusUpdated={onStatusUpdated}
               />
             )}
@@ -120,7 +120,7 @@ export function PlantRow({ plant, onDeleted, onStatusUpdated, canEdit, canDelete
             <TableCell className="pl-4" />
             <TableCell />
             <TableCell />
-            <TableCell /> {/* location — empty for sub-rows */}
+            <TableCell />
 
             <TableCell>
               <span className="text-sm text-[#1d4ed8] font-medium pl-2">
@@ -134,10 +134,20 @@ export function PlantRow({ plant, onDeleted, onStatusUpdated, canEdit, canDelete
               </span>
             </TableCell>
 
-            <TableCell />
+            <TableCell>
+              <StatusBadge status={inv.status} />
+            </TableCell>
 
             <TableCell onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-3">
+                {canEdit && inv.status !== "Cancelled" && (
+                  <CancelButton
+                    invoiceId={inv._id}
+                    invoiceNumber={inv.invoiceNumber}
+                    currentStatus={inv.status}
+                    onStatusUpdated={onStatusUpdated}
+                  />
+                )}
                 {canDelete && (
                   <DeleteButton
                     invoiceId={inv._id}

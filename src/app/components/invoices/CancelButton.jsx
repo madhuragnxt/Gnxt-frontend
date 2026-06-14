@@ -15,7 +15,7 @@ import {
 const API_BASE_URL =
   import.meta.env?.VITE_API_URL || "http://localhost:5000/api";
 
-export function CancelButton({ plantNumber, currentStatus, onStatusUpdated }) {
+export function CancelButton({ invoiceId, invoiceNumber, currentStatus, onStatusUpdated }) {
   const { token } = useAuth();
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -23,7 +23,6 @@ export function CancelButton({ plantNumber, currentStatus, onStatusUpdated }) {
   const handleCancel = async () => {
     if (currentStatus === "Cancelled") return;
 
-    // Use token from context, fallback to localStorage directly
     const authToken = token || localStorage.getItem("gnxt_token");
 
     if (!authToken) {
@@ -35,7 +34,7 @@ export function CancelButton({ plantNumber, currentStatus, onStatusUpdated }) {
       setLoading(true);
 
       const res = await fetch(
-        `${API_BASE_URL}/invoices/${plantNumber}/status`,
+        `${API_BASE_URL}/invoices/${invoiceId}/status`,
         {
           method: "PATCH",
           headers: {
@@ -53,7 +52,7 @@ export function CancelButton({ plantNumber, currentStatus, onStatusUpdated }) {
       }
 
       if (onStatusUpdated) {
-        onStatusUpdated(plantNumber, "Cancelled");
+        onStatusUpdated(invoiceId, "Cancelled");
       }
       setOpen(false);
     } catch (err) {
@@ -78,7 +77,7 @@ export function CancelButton({ plantNumber, currentStatus, onStatusUpdated }) {
         onClick={() => setOpen(true)}
         disabled={loading}
         className="text-amber-500 hover:text-red-600 transition-colors"
-        title="Cancel Invoice Group"
+        title="Cancel Invoice"
       >
         {loading ? (
           <Loader2 className="w-4 h-4 animate-spin" />
@@ -91,10 +90,10 @@ export function CancelButton({ plantNumber, currentStatus, onStatusUpdated }) {
         <AlertDialogContent className="bg-white border border-border shadow-lg rounded-xl max-w-md p-6">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-lg font-bold text-slate-900">
-              Cancel Invoice Group?
+              Cancel Invoice {invoiceNumber}?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-slate-500 mt-2">
-              Are you sure you want to cancel all invoices under Plant No. <strong className="font-semibold text-slate-900">{plantNumber}</strong>? This action cannot be undone.
+              Are you sure you want to cancel Invoice #<strong className="font-semibold text-slate-900">{invoiceNumber}</strong>? Only this invoice will be cancelled. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-6 flex justify-end gap-3">
@@ -113,7 +112,7 @@ export function CancelButton({ plantNumber, currentStatus, onStatusUpdated }) {
               className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg text-sm flex items-center gap-2 transition-colors disabled:opacity-50"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              Yes, Cancel Group
+              Yes, Cancel Invoice
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

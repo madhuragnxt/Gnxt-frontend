@@ -115,6 +115,14 @@ export function InvoicesPage() {
     fetchInvoices(searchQuery, statusFilter, 1);
   }, [searchQuery, statusFilter, token]);
 
+  // Silent refresh on cache updates
+  useEffect(() => {
+    if (!token) return;
+    const handler = () => fetchInvoices(searchQuery, statusFilter, currentPage, true);
+    window.addEventListener("api-cache-updated", handler);
+    return () => window.removeEventListener("api-cache-updated", handler);
+  }, [searchQuery, statusFilter, currentPage, token]);
+
   // Auto-refresh the invoices list every 30 seconds
   useEffect(() => {
     if (!token) return;
@@ -204,14 +212,14 @@ export function InvoicesPage() {
     );
   };
 
-  const handleStatusUpdated = (plantNumber, newStatus) => {
+  const handleStatusUpdated = (invoiceId, newStatus) => {
     setInvoices((prev) =>
-      prev.map((plant) => {
-        if (plant.plantNumber === plantNumber) {
-          return { ...plant, status: newStatus };
-        }
-        return plant;
-      })
+      prev.map((plant) => ({
+        ...plant,
+        invoices: plant.invoices.map((inv) =>
+          inv._id === invoiceId ? { ...inv, status: newStatus } : inv
+        ),
+      }))
     );
   };
 

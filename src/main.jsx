@@ -2,13 +2,14 @@ import { createRoot } from "react-dom/client";
 import App from "./app/App";
 import "./styles/index.css";
 import axios from "axios";
-import { 
-  initDb, 
-  getCache, 
-  setCache, 
-  addToSyncQueue, 
-  optimisticUpdate, 
-  invalidateCachePrefix 
+import { io } from "socket.io-client";
+import {
+  initDb,
+  getCache,
+  setCache,
+  addToSyncQueue,
+  optimisticUpdate,
+  invalidateCachePrefix
 } from "./app/utils/db";
 
 // Initialize IndexedDB on bootstrap
@@ -26,11 +27,35 @@ if ("serviceWorker" in navigator) {
   });
 }
 
+// ── Socket.io connection ────────────────────────────────
+const API_BASE_URL = import.meta.env?.VITE_API_URL || "http://localhost:5000/api";
+const SOCKET_URL = API_BASE_URL.replace("/api", "");
+const socket = io(SOCKET_URL, {
+  transports: ["websocket", "polling"],
+  autoConnect: true,
+});
+
+socket.on("connect", () => console.log("[Socket] Connected:", socket.id));
+socket.on("disconnect", () => console.log("[Socket] Disconnected"));
+
+socket.on("shipments:changed", () => {
+  console.log("[Socket] shipments:changed — invalidating cache");
+  invalidateCachePrefix("shipments");
+  invalidateCachePrefix("dashboard");
+  window.dispatchEvent(new CustomEvent("api-cache-updated"));
+});
+
+socket.on("invoices:changed", () => {
+  console.log("[Socket] invoices:changed — invalidating cache");
+  invalidateCachePrefix("invoices");
+  window.dispatchEvent(new CustomEvent("api-cache-updated"));
+});
+
 // Helper to determine sync/action name for queue display
 function getActionName(method, url) {
   const lowercaseUrl = url.toLowerCase();
   let action = "Modify Record";
-  
+
   if (method === "POST") action = "Create Record";
   else if (method === "DELETE") action = "Delete Record";
   else if (method === "PUT" || method === "PATCH") action = "Update Record";
@@ -54,11 +79,26 @@ function getActionName(method, url) {
 // Save the original fetch to bypass interceptor when fetching from network
 const originalFetch = window.fetch;
 
+// Stale-While-Revalidate: serve cached data instantly, refresh in background
+const revalidateCache = async (urlString) => {
+  try {
+    const response = await originalFetch(urlString);
+    if (response.ok) {
+      const clone = response.clone();
+      const json = await clone.json();
+      await setCache(urlString, json);
+      window.dispatchEvent(new CustomEvent("api-cache-updated"));
+    }
+  } catch (err) {
+    console.warn("[SWR] Background revalidation failed:", urlString);
+  }
+};
+
 // Patch window.fetch globally to handle local caching, queueing, and hybrid synchronizations
 window.fetch = async (url, options = {}) => {
   const urlString = url.toString();
   const method = options.method?.toUpperCase() || "GET";
-  
+
   // Attach authorization token if present
   const token = localStorage.getItem("gnxt_token");
   if (token && (urlString.includes("/api/") || urlString.includes("localhost:5000"))) {
@@ -93,37 +133,49 @@ window.fetch = async (url, options = {}) => {
     return originalFetch(url, options);
   }
 
-  // Handle GET Requests (Read Cache)
+  // Handle GET Requests — Stale-While-Revalidate (cache-first)
   if (method === "GET") {
+    // Try cache first (instant)
+    const cached = await getCache(urlString);
+    if (cached && navigator.onLine) {
+      // Fire background revalidation
+      revalidateCache(urlString);
+      return new Response(JSON.stringify(cached), {
+        status: 200,
+        statusText: "OK",
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    // No cache or offline — do network or fallback
     if (navigator.onLine) {
       try {
         const response = await originalFetch(url, options);
         if (response.ok) {
           const clone = response.clone();
           const json = await clone.json();
-          // Store response in IndexedDB GET cache
           await setCache(urlString, json);
           return response;
         }
         return response;
       } catch (err) {
         console.warn("[Fetch Interceptor] GET network failed, trying cache:", urlString);
-        const cached = await getCache(urlString);
-        if (cached) {
-          return new Response(JSON.stringify(cached), {
+        const cachedFallback = await getCache(urlString);
+        if (cachedFallback) {
+          return new Response(JSON.stringify(cachedFallback), {
             status: 200,
             statusText: "OK",
             headers: { "Content-Type": "application/json" }
           });
         }
-        throw err; // propagates original error if no cache exists
+        throw err;
       }
     } else {
       // Offline mode: Serve from IndexedDB
       console.log("[Fetch Interceptor] Offline mode, serving GET cache:", urlString);
-      const cached = await getCache(urlString);
-      if (cached) {
-        return new Response(JSON.stringify(cached), {
+      const cachedOffline = await getCache(urlString);
+      if (cachedOffline) {
+        return new Response(JSON.stringify(cachedOffline), {
           status: 200,
           statusText: "OK",
           headers: { "Content-Type": "application/json" }
@@ -133,7 +185,6 @@ window.fetch = async (url, options = {}) => {
       // Safe fallbacks for lists/views to prevent blank screen crashes
       let fallbackData = [];
       if (urlString.includes("/shipments/next-id")) {
-        // Mock next ID sequence offline
         const year = new Date().getFullYear();
         fallbackData = { success: true, data: { nextShipmentId: `SHP-${year}-OFFLINE-${Date.now().toString().slice(-4)}`, lrPrefix: `LR-${year}-OFFLINE`, sequence: 9999 } };
       } else if (urlString.includes("/shipments/plant-numbers")) {
@@ -164,25 +215,24 @@ window.fetch = async (url, options = {}) => {
         else if (urlString.includes("/invoices")) moduleKey = "invoices";
         else if (urlString.includes("/vehicles")) moduleKey = "vehicles";
         else if (urlString.includes("/drivers")) moduleKey = "drivers";
-        
+
         if (moduleKey) {
           await invalidateCachePrefix(moduleKey);
         }
+        // Dispatch event so UI can refresh silently
+        window.dispatchEvent(new CustomEvent("api-cache-updated"));
       }
       return response;
     } catch (err) {
       console.warn("[Fetch Interceptor] Write network failed, queuing operation:", urlString);
-      // Fallback: treat as offline write queue
     }
   }
 
   // Offline Mode (or dropped network): Queue the request and perform an optimistic update on local caches
   console.log(`[Fetch Interceptor] Offline mode: queueing ${method} for ${urlString}`);
-  
+
   let reqBody = options.body;
   if (reqBody instanceof FormData) {
-    // FormData cannot be easily stored directly in IndexedDB. Let's serialize if possible,
-    // or store metadata since files can be re-sent later. For now, serialize if text properties.
     reqBody = {};
     for (const [key, value] of reqBody.entries()) {
       reqBody[key] = value;
@@ -221,10 +271,9 @@ window.fetch = async (url, options = {}) => {
 };
 
 // Patch Axios globally to use the patched window.fetch as its under-the-hood adapter.
-// This ensures that Axios requests (used in dashboard/trips pages) leverage the same caching/syncing logic.
 axios.defaults.adapter = async function fetchAdapter(config) {
   const url = axios.getUri(config);
-  
+
   // Format headers to standard object
   const headers = {};
   if (config.headers) {
@@ -250,7 +299,6 @@ axios.defaults.adapter = async function fetchAdapter(config) {
     const text = await response.text();
     const data = text ? JSON.parse(text) : null;
 
-    // Build the Axios-compatible response structure
     const axiosResponse = {
       data: data,
       status: response.status,
@@ -260,7 +308,6 @@ axios.defaults.adapter = async function fetchAdapter(config) {
       request: null
     };
 
-    // If fetch returned non-ok status, reject with Axios error structure
     if (!response.ok) {
       const error = new Error(`Request failed with status code ${response.status}`);
       error.response = axiosResponse;
@@ -277,7 +324,7 @@ axios.defaults.adapter = async function fetchAdapter(config) {
   }
 };
 
-// Patched Axios Interceptor to set token (ensures it is set correctly on config headers if adapter shifts)
+// Patched Axios Interceptor to set token
 axios.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("gnxt_token");

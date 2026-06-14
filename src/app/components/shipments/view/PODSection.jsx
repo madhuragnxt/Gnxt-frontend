@@ -58,7 +58,7 @@ function DestinationPODCard({
   const isPodSaved = !!(dest.podImages?.length > 0 || dest.podReceiverName || dest.podRemarks);
 
   const isPending = shipmentStatus === "Pending";
-  const isClosed = shipmentStatus === "Cancelled" || shipmentStatus === "Closed";
+  const isClosed = shipmentStatus === "Cancelled";
 
   const lrDisplay = dest.lrNumber || `LR-TEMP-${index + 1}`;
 

@@ -71,7 +71,20 @@ export function VehicleTrackingHeader({
           </Button>
         )}
 
+        {/* Awaiting Close — disabled button */}
         {(activeShipment?.status === "In Transit" || activeShipment?.status === "Delivered") && (
+          <Button
+            variant="outline"
+            className="gap-2 h-9 border-amber-300 text-amber-700 bg-amber-50 cursor-not-allowed opacity-70"
+            disabled
+          >
+            <Check className="w-3.5 h-3.5" />
+            Arrived / Vehicle Returned (Awaiting Close)
+          </Button>
+        )}
+
+        {/* Closed but no returnedDate — active arrival button */}
+        {activeShipment?.status === "Closed" && !activeShipment?.returnedDate && (
           <Button
             className="gap-2 h-9 bg-amber-600 hover:bg-amber-700 text-white cursor-pointer shadow-sm animate-pulse"
             onClick={onReturn}
@@ -81,7 +94,8 @@ export function VehicleTrackingHeader({
           </Button>
         )}
 
-        {activeShipment?.status === "Closed" && (
+        {/* Closed with returnedDate — fully done */}
+        {activeShipment?.status === "Closed" && activeShipment?.returnedDate && (
           <Button
             variant="secondary"
             className="gap-2 h-9 cursor-default pointer-events-none bg-slate-100 text-slate-700 border border-slate-200"

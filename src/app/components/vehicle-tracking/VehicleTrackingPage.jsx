@@ -28,9 +28,9 @@ export function VehicleTrackingPage() {
       const res = await fetch(`${API_BASE}/shipments?limit=100`);
       const json = await res.json();
       if (json.success && json.data) {
-        // Find active shipment for this vehicleNumber which is not Closed and not Cancelled
+        // Find active shipment: not cancelled, and (not closed OR closed without returnedDate)
         const active = json.data.find(
-          (s) => s.vehicleNumber === vehicleId && s.status !== "Closed" && s.status !== "Cancelled"
+          (s) => s.vehicleNumber === vehicleId && s.status !== "Cancelled" && !(s.status === "Closed" && s.returnedDate)
         );
         if (active) {
           setActiveShipment(active);
@@ -198,6 +198,13 @@ export function VehicleTrackingPage() {
     setIsPolling(false);
     setLastPoll(new Date());
   }, [fetchActiveShipment]);
+
+  // Silent refresh on cache updates
+  useEffect(() => {
+    const handler = () => triggerRefresh();
+    window.addEventListener("api-cache-updated", handler);
+    return () => window.removeEventListener("api-cache-updated", handler);
+  }, [triggerRefresh]);
 
   // Start polling
   useEffect(() => {
