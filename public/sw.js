@@ -1,9 +1,11 @@
 // Service Worker for caching static assets and handling client-side SPA navigation offline.
-const CACHE_NAME = "gnxt-static-assets-v1";
+const CACHE_NAME = "gnxt-static-assets-v2"; // bump to clear old cache
+
+const SW_VERSION = 2; // Bump to force re-install and clear old caches
 
 // Simple install event
 self.addEventListener("install", (event) => {
-  console.log("[Service Worker] Installing service worker...");
+  console.log("[Service Worker] Installing service worker (v" + SW_VERSION + ")...");
   self.skipWaiting();
 });
 
@@ -45,11 +47,13 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // Cache the latest index.html on successful network fetch
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put("/", clone);
-          });
+          // Only cache successful 200 responses — never cache 404/500 pages
+          if (response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put("/", clone);
+            });
+          }
           return response;
         })
         .catch(() => {
