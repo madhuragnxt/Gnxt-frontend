@@ -150,15 +150,15 @@ window.fetch = async (url, options = {}) => {
   const urlString = url.toString();
   const method = options.method?.toUpperCase() || "GET";
 
-  // Add credentials for session cookie
-  if (isApi) {
-    options.credentials = "include";
-  }
-
   // Bypass interceptor if:
   // - It's not an API call (e.g. static files, bundle scripts)
   // - The special bypass header "X-Bypass-Offline" is set (used during sync queues)
   const isApi = urlString.includes("/api/") || urlString.includes("localhost:5000") || urlString.includes("127.0.0.1:5000");
+
+  // Add credentials for session cookie
+  if (isApi) {
+    options.credentials = "include";
+  }
   const hasBypass = options.headers && (
     (options.headers instanceof Headers && options.headers.has("X-Bypass-Offline")) ||
     (options.headers["X-Bypass-Offline"] !== undefined)
