@@ -11,8 +11,6 @@ import { useAuth } from "../../context/AuthContext";
 const API_BASE_URL = import.meta.env?.VITE_API_URL || "http://localhost:5000/api";
 
 export function InvoiceHistorySheet({ open, onOpenChange }) {
-  const { token } = useAuth();
-  const getToken = () => token || localStorage.getItem("gnxt_token");
   const [searchQuery, setSearchQuery] = useState("");
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -30,9 +28,7 @@ export function InvoiceHistorySheet({ open, onOpenChange }) {
       });
 
       const res = await fetch(`${API_BASE_URL}/invoices/history?${params}`, {
-        headers: {
-          Authorization: `Bearer ${getToken()}`,
-        },
+        credentials: "include",
       });
       const result = await res.json();
 

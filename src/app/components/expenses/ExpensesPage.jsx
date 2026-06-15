@@ -77,6 +77,13 @@ export function ExpensesPage() {
     fetchExpenses();
   }, []);
 
+  // Live refresh on socket cache update
+  useEffect(() => {
+    const handler = () => fetchExpenses();
+    window.addEventListener("api-cache-updated", handler);
+    return () => window.removeEventListener("api-cache-updated", handler);
+  }, []);
+
   // Filter dropdown data
   const shipmentIds = useMemo(() => {
     const ids = expenses.map((e) => e.tripId || e.lrNumber).filter(Boolean);

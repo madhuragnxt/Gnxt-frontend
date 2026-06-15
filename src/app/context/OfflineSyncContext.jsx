@@ -53,14 +53,10 @@ export function OfflineSyncProvider({ children }) {
           "X-Bypass-Offline": "true" // Signal to fetch interceptor to send to network
         };
 
-        const token = localStorage.getItem("gnxt_token");
-        if (token) {
-          headers["Authorization"] = `Bearer ${token}`;
-        }
-
         const fetchOptions = {
           method: item.method,
           headers,
+          credentials: "include",
         };
 
         if (item.body && (item.method === "POST" || item.method === "PUT" || item.method === "PATCH")) {

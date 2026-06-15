@@ -21,14 +21,6 @@ export function DeleteButton({ invoiceId, onDeleted }) {
   const [open, setOpen] = useState(false);
 
   const handleDelete = async () => {
-    // Use token from context, fallback to localStorage directly
-    const authToken = token || localStorage.getItem("gnxt_token");
-
-    if (!authToken) {
-      alert("Session expired. Please log in again.");
-      return;
-    }
-
     try {
       setLoading(true);
 
@@ -36,9 +28,7 @@ export function DeleteButton({ invoiceId, onDeleted }) {
         `${API_BASE_URL}/invoices/${invoiceId}`,
         {
           method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-          },
+          credentials: "include",
         }
       );
 

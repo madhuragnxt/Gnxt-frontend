@@ -25,6 +25,14 @@ export function DriversPage() {
     fetchDrivers();
   }, []);
 
+  // Live refresh on socket cache update
+  useEffect(() => {
+    if (typeof fetchDrivers !== "function") return;
+    const handler = () => fetchDrivers();
+    window.addEventListener("api-cache-updated", handler);
+    return () => window.removeEventListener("api-cache-updated", handler);
+  }, [fetchDrivers]);
+
   const filtered = drivers.filter((d) => {
     const matchesSearch =
       d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

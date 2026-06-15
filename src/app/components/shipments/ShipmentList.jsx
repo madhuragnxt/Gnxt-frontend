@@ -37,6 +37,13 @@ export function ShipmentList() {
     fetchShipments();
   }, [fetchShipments]);
 
+  // Live refresh on socket cache update
+  useEffect(() => {
+    const handler = () => fetchShipments();
+    window.addEventListener("api-cache-updated", handler);
+    return () => window.removeEventListener("api-cache-updated", handler);
+  }, [fetchShipments]);
+
   useEffect(() => {
     setTotal(shipmentData.length);
   }, [shipmentData]);

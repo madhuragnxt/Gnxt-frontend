@@ -173,8 +173,8 @@ export function Layout() {
       }
     };
     fetchCount();
-    // Refresh every 60 seconds
-    const interval = setInterval(fetchCount, 60_000);
+    // Refresh every 7 min; real-time updates via socket events
+    const interval = setInterval(fetchCount, 420_000);
     return () => clearInterval(interval);
   }, []);
 
@@ -204,12 +204,19 @@ export function Layout() {
     if (user.role === "Super Admin") return;
 
     const currentModule = getRequiredPermissionForPath(location.pathname);
-    if (currentModule && currentModule !== "Settings") {
-      if (!hasViewPermission(currentModule)) {
-        const firstPage = REDIRECT_PAGES.find(p => hasViewPermission(p.perm));
-        if (firstPage && firstPage.path !== location.pathname) {
-          navigate(firstPage.path, { replace: true });
-        }
+    if (!currentModule) return;
+    if (currentModule === "Settings") {
+      if (!hasViewPermission("Settings")) {
+        navigate("/", { replace: true });
+      }
+      return;
+    }
+    if (!hasViewPermission(currentModule)) {
+      const firstPage = REDIRECT_PAGES.find(p => hasViewPermission(p.perm));
+      if (firstPage) {
+        navigate(firstPage.path, { replace: true });
+      } else {
+        navigate("/settings", { replace: true });
       }
     }
   }, [location.pathname, user, loading, isAuthenticated, navigate]);

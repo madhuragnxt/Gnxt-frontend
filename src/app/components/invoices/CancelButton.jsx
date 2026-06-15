@@ -23,13 +23,6 @@ export function CancelButton({ invoiceId, invoiceNumber, currentStatus, onStatus
   const handleCancel = async () => {
     if (currentStatus === "Cancelled") return;
 
-    const authToken = token || localStorage.getItem("gnxt_token");
-
-    if (!authToken) {
-      alert("Session expired. Please log in again.");
-      return;
-    }
-
     try {
       setLoading(true);
 
@@ -37,10 +30,8 @@ export function CancelButton({ invoiceId, invoiceNumber, currentStatus, onStatus
         `${API_BASE_URL}/invoices/${invoiceId}/status`,
         {
           method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${authToken}`,
-          },
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ status: "Cancelled" }),
         }
       );

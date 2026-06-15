@@ -58,8 +58,6 @@ export function InvoicesPage() {
   });
   const [submitting, setSubmitting] = useState(false);
 
-  const getToken = () => token || localStorage.getItem("gnxt_token");
-
   const fetchInvoices = async (
     search = "",
     status = "All",
@@ -81,11 +79,7 @@ export function InvoicesPage() {
 
       const res = await fetch(
         `${API_BASE_URL}/invoices?${params}`,
-        {
-          headers: {
-            Authorization: `Bearer ${getToken()}`,
-          },
-        }
+        { credentials: "include" }
       );
 
       const result = await res.json();
@@ -123,15 +117,7 @@ export function InvoicesPage() {
     return () => window.removeEventListener("api-cache-updated", handler);
   }, [searchQuery, statusFilter, currentPage, token]);
 
-  // Auto-refresh the invoices list every 30 seconds
-  useEffect(() => {
-    if (!token) return;
-    const interval = setInterval(() => {
-      fetchInvoices(searchQuery, statusFilter, currentPage, true);
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [searchQuery, statusFilter, currentPage, token]);
-
+  // Auto-refresh removed — real-time updates via socket events
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
 
@@ -161,9 +147,7 @@ export function InvoicesPage() {
         `${API_BASE_URL}/invoices/upload`,
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${getToken()}`,
-          },
+          credentials: "include",
           body: formData,
         }
       );
@@ -232,10 +216,8 @@ export function InvoicesPage() {
     try {
       const res = await fetch(`${API_BASE_URL}/invoices`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${getToken()}`,
-        },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(newInvoiceData),
       });
 

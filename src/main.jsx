@@ -35,19 +35,64 @@ const socket = io(SOCKET_URL, {
   autoConnect: true,
 });
 
+// Global cache-busting version — bumped on every invalidation so the GET handler
+// can skip stale IndexedDB entries even if deletion is still in-flight.
+window.__cacheVersion = Date.now();
+
+// Fallback: global 7-min poll in case socket ever drops silently
+setInterval(() => {
+  window.dispatchEvent(new CustomEvent("api-cache-updated"));
+}, 420_000);
+
 socket.on("connect", () => console.log("[Socket] Connected:", socket.id));
 socket.on("disconnect", () => console.log("[Socket] Disconnected"));
 
-socket.on("shipments:changed", () => {
-  console.log("[Socket] shipments:changed — invalidating cache");
-  invalidateCachePrefix("shipments");
-  invalidateCachePrefix("dashboard");
+socket.on("reconnect", async () => {
+  console.log("[Socket] Reconnected — refreshing all data");
+  window.__cacheVersion = Date.now();
+  _revalidationTimers = {};
   window.dispatchEvent(new CustomEvent("api-cache-updated"));
 });
 
-socket.on("invoices:changed", () => {
+function bustCache() {
+  window.__cacheVersion = Date.now();
+  _revalidationTimers = {};
+}
+
+socket.on("shipments:changed", async () => {
+  console.log("[Socket] shipments:changed — invalidating cache");
+  await invalidateCachePrefix("shipments");
+  await invalidateCachePrefix("dashboard");
+  bustCache();
+  window.dispatchEvent(new CustomEvent("api-cache-updated"));
+});
+
+socket.on("invoices:changed", async () => {
   console.log("[Socket] invoices:changed — invalidating cache");
-  invalidateCachePrefix("invoices");
+  await invalidateCachePrefix("invoices");
+  bustCache();
+  window.dispatchEvent(new CustomEvent("api-cache-updated"));
+});
+
+socket.on("expenses:changed", async () => {
+  console.log("[Socket] expenses:changed — invalidating cache");
+  await invalidateCachePrefix("expenses");
+  bustCache();
+  window.dispatchEvent(new CustomEvent("api-cache-updated"));
+});
+
+socket.on("vehicles:changed", async () => {
+  console.log("[Socket] vehicles:changed — invalidating cache");
+  await invalidateCachePrefix("vehicles");
+  await invalidateCachePrefix("dashboard");
+  bustCache();
+  window.dispatchEvent(new CustomEvent("api-cache-updated"));
+});
+
+socket.on("drivers:changed", async () => {
+  console.log("[Socket] drivers:changed — invalidating cache");
+  await invalidateCachePrefix("drivers");
+  bustCache();
   window.dispatchEvent(new CustomEvent("api-cache-updated"));
 });
 
@@ -79,13 +124,19 @@ function getActionName(method, url) {
 // Save the original fetch to bypass interceptor when fetching from network
 const originalFetch = window.fetch;
 
-// Stale-While-Revalidate: serve cached data instantly, refresh in background
+// Stale-While-Revalidate: serve cached data instantly, refresh in background (debounced per URL)
+let _revalidationTimers = {};
 const revalidateCache = async (urlString) => {
+  const now = Date.now();
+  const last = _revalidationTimers[urlString];
+  if (last && now - last < 60_000) return; // skip if last revalidation was < 60s ago
+  _revalidationTimers[urlString] = now;
   try {
     const response = await originalFetch(urlString);
     if (response.ok) {
       const clone = response.clone();
       const json = await clone.json();
+      json._cachedAt = Date.now();
       await setCache(urlString, json);
       window.dispatchEvent(new CustomEvent("api-cache-updated"));
     }
@@ -99,21 +150,9 @@ window.fetch = async (url, options = {}) => {
   const urlString = url.toString();
   const method = options.method?.toUpperCase() || "GET";
 
-  // Attach authorization token if present
-  const token = localStorage.getItem("gnxt_token");
-  if (token && (urlString.includes("/api/") || urlString.includes("localhost:5000"))) {
-    if (!options.headers) {
-      options.headers = {};
-    }
-    if (options.headers instanceof Headers) {
-      if (!options.headers.has("Authorization")) {
-        options.headers.set("Authorization", `Bearer ${token}`);
-      }
-    } else {
-      if (!options.headers.Authorization && !options.headers.authorization) {
-        options.headers.Authorization = `Bearer ${token}`;
-      }
-    }
+  // Add credentials for session cookie
+  if (isApi) {
+    options.credentials = "include";
   }
 
   // Bypass interceptor if:
@@ -137,7 +176,10 @@ window.fetch = async (url, options = {}) => {
   if (method === "GET") {
     // Try cache first (instant)
     const cached = await getCache(urlString);
-    if (cached && navigator.onLine) {
+    // If cached, check it's not stale (cache was invalidated after this entry was stored)
+    const cacheVersion = window.__cacheVersion || Date.now();
+    const isStale = cached && cached._cachedAt && cached._cachedAt < cacheVersion;
+    if (cached && !isStale && navigator.onLine) {
       // Fire background revalidation
       revalidateCache(urlString);
       return new Response(JSON.stringify(cached), {
@@ -147,13 +189,14 @@ window.fetch = async (url, options = {}) => {
       });
     }
 
-    // No cache or offline — do network or fallback
+    // No cache, stale, or offline — do network or fallback
     if (navigator.onLine) {
       try {
         const response = await originalFetch(url, options);
         if (response.ok) {
           const clone = response.clone();
           const json = await clone.json();
+          json._cachedAt = Date.now();
           await setCache(urlString, json);
           return response;
         }
@@ -219,6 +262,7 @@ window.fetch = async (url, options = {}) => {
         if (moduleKey) {
           await invalidateCachePrefix(moduleKey);
         }
+        bustCache();
         // Dispatch event so UI can refresh silently
         window.dispatchEvent(new CustomEvent("api-cache-updated"));
       }
@@ -291,7 +335,8 @@ axios.defaults.adapter = async function fetchAdapter(config) {
     method: config.method?.toUpperCase() || "GET",
     headers,
     body,
-    mode: "cors"
+    mode: "cors",
+    credentials: "include",
   };
 
   try {
@@ -323,20 +368,5 @@ axios.defaults.adapter = async function fetchAdapter(config) {
     return Promise.reject(error);
   }
 };
-
-// Patched Axios Interceptor to set token
-axios.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("gnxt_token");
-    if (token && (config.url?.includes("/api/") || config.url?.includes("localhost:5000") || config.url?.includes("127.0.0.1:5000"))) {
-      config.headers = {
-        ...config.headers,
-        Authorization: `Bearer ${token}`,
-      };
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
 
 createRoot(document.getElementById("root")).render(<App />);

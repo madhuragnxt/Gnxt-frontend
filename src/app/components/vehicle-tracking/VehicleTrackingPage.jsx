@@ -7,7 +7,7 @@ import { TimelineSection }       from "./TimelineSection";
 import { QuickActionsPanel }     from "./QuickActionsPanel";
 
 const API_BASE = import.meta.env?.VITE_API_URL || "http://localhost:5000/api";
-const POLL_INTERVAL_MS = 6_000; // poll every 6 seconds
+const POLL_INTERVAL_MS = 420_000; // poll every 7 min; real-time via socket events
 
 export function VehicleTrackingPage() {
   const { vehicleId } = useParams();

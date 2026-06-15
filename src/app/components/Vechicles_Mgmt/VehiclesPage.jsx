@@ -30,6 +30,13 @@ export function VehiclesPage() {
     fetchVehicles();
   }, []);
 
+  // Live refresh on socket cache update
+  useEffect(() => {
+    const handler = () => fetchVehicles();
+    window.addEventListener("api-cache-updated", handler);
+    return () => window.removeEventListener("api-cache-updated", handler);
+  }, []);
+
   const fetchVehicles = async () => {
     setLoading(true);
     try {

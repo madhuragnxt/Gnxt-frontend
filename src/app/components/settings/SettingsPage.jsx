@@ -389,13 +389,20 @@ export function SettingsPage() {
     setRolePermissions(defaultPerms);
   };
 
+  // Live refresh on socket cache update
+  useEffect(() => {
+    const handler = () => { fetchUsers(); fetchLogs(); };
+    window.addEventListener("api-cache-updated", handler);
+    return () => window.removeEventListener("api-cache-updated", handler);
+  }, []);
+
   const fetchUsers = async () => {
     setLoadingUsers(true);
     try {
       // Fetch real users and role templates in parallel
       const [usersRes, templatesRes] = await Promise.all([
-        fetch(`${API}/users`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API}/users/role-templates`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API}/users`, { credentials: "include" }),
+        fetch(`${API}/users/role-templates`, { credentials: "include" }),
       ]);
       const [usersData, templatesData] = await Promise.all([
         usersRes.json(),
@@ -416,7 +423,7 @@ export function SettingsPage() {
     setLoadingLogs(true);
     try {
       const res = await fetch(`${API}/users/activity-log`, {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
       const data = await res.json();
       if (data.success) setLogs(data.data);
@@ -459,7 +466,8 @@ export function SettingsPage() {
       if (isEditing) delete body.password;
       const res = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(body),
       });
       const data = await res.json();
@@ -482,7 +490,8 @@ export function SettingsPage() {
     try {
       const res = await fetch(`${API}/users/${user._id}/status`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ status: newStatus }),
       });
       const data = await res.json();
@@ -503,7 +512,8 @@ export function SettingsPage() {
     try {
       const res = await fetch(`${API}/users/${resetUserId}/password`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ newPassword }),
       });
       const data = await res.json();
@@ -522,7 +532,7 @@ export function SettingsPage() {
     try {
       const res = await fetch(`${API}/users/${user._id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
       const data = await res.json();
       if (data.success) { fetchUsers(); fetchLogs(); }
@@ -584,7 +594,8 @@ export function SettingsPage() {
     try {
       const res = await fetch(`${API}/users/role/permissions`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ role: selectedRole, permissions: legacyPerms, granularPermissions: targetPerms }),
       });
       const data = await res.json();

@@ -12,14 +12,24 @@ export function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!username.trim() || !password.trim()) {
+    const u = username.trim();
+    const p = password;
+    if (!u || !p) {
       setError("Please enter both username and password.");
+      return;
+    }
+    if (u.length > 100) {
+      setError("Username is too long.");
+      return;
+    }
+    if (p.length > 128) {
+      setError("Password is too long.");
       return;
     }
     setError("");
     setLoading(true);
     try {
-      await login(username.trim(), password);
+      await login(u, p);
     } catch (err) {
       setError(err.message || "Login failed. Please check your credentials.");
     } finally {

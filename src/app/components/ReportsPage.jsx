@@ -123,6 +123,13 @@ export function ReportsPage() {
     fetchStats();
   }, [dateRange, vehicleFilter, driverFilter, dealerFilter, groupBy, refreshTrigger]);
 
+  // Live refresh on socket cache update
+  useEffect(() => {
+    const handler = () => setRefreshTrigger((prev) => prev + 1);
+    window.addEventListener("api-cache-updated", handler);
+    return () => window.removeEventListener("api-cache-updated", handler);
+  }, []);
+
   const handleRefresh = () => {
     setRefreshTrigger((prev) => prev + 1);
   };
