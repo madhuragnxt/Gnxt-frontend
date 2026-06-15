@@ -11,6 +11,7 @@ import { useAuth } from "../../context/AuthContext";
 const API_BASE_URL = import.meta.env?.VITE_API_URL || "http://localhost:5000/api";
 
 export function InvoiceHistorySheet({ open, onOpenChange }) {
+  const { token } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(false);

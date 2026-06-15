@@ -396,6 +396,29 @@ export function ExpensesPage() {
     }
   };
 
+  const API_BASE = import.meta.env?.VITE_API_URL || "http://localhost:5000/api";
+
+  const handleExportZip = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (filterDate) params.set("dateFrom", filterDate.toISOString());
+      if (filterExpenseType !== "all") params.set("expenseType", filterExpenseType);
+      const res = await fetch(`${API_BASE}/expenses/export?${params.toString()}`, { credentials: "include" });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.message || "Export failed"); }
+      const blob = await res.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `GNXT_Expenses_Export_${new Date().toISOString().slice(0, 10)}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    } catch (err) {
+      console.error("Export ZIP error:", err);
+      alert("Export failed: " + err.message);
+    }
+  };
+
   const handleExport = () => {
     // Flatten the grouped data to show individual expenses
     const flattenedRows = [];
@@ -490,6 +513,7 @@ export function ExpensesPage() {
           setAddModalOpen(true);
         }}
         onExport={handleExport}
+        onExportZip={handleExportZip}
         filterDate={filterDate}
         setFilterDate={setFilterDate}
         dateOpen={dateOpen}

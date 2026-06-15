@@ -109,6 +109,24 @@ export function ShipmentList() {
 
   const API_BASE_URL = import.meta.env?.VITE_API_URL || "http://localhost:5000/api";
 
+  const handleExport = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/shipments/export`, { credentials: "include" });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.message || "Export failed"); }
+      const blob = await res.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `GNXT_Shipments_Export_${new Date().toISOString().slice(0, 10)}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    } catch (err) {
+      console.error("Export error:", err);
+      alert("Export failed: " + err.message);
+    }
+  };
+
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -168,6 +186,7 @@ export function ShipmentList() {
           total={activeShipmentsOnly.length}
           onCreateClick={() => setSheetOpen(true)}
           onHistoryClick={() => setHistoryOpen(true)}
+          onExport={handleExport}
         />
 
         <ShipmentFiltersBar

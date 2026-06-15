@@ -213,6 +213,10 @@ function DestinationPODCard({
                     const files = e.target.files;
                     if (files) {
                       Array.from(files).forEach((file) => {
+                        if (file.size > 5 * 1024 * 1024) {
+                          alert(`"${file.name}" exceeds the 5MB limit and will be skipped.`);
+                          return;
+                        }
                         const reader = new FileReader();
                         reader.onload = (ev) => {
                           if (ev.target?.result)

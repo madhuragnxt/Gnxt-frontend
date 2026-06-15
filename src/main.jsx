@@ -63,6 +63,9 @@ socket.on("shipments:changed", async () => {
   console.log("[Socket] shipments:changed — invalidating cache");
   await invalidateCachePrefix("shipments");
   await invalidateCachePrefix("dashboard");
+  await invalidateCachePrefix("vehicles");
+  await invalidateCachePrefix("drivers");
+  await invalidateCachePrefix("invoices");
   bustCache();
   window.dispatchEvent(new CustomEvent("api-cache-updated"));
 });
@@ -253,14 +256,29 @@ window.fetch = async (url, options = {}) => {
       if (response.ok) {
         // Clear caches of the corresponding module to ensure lists re-fetch fresh database updates
         let moduleKey = "";
-        if (urlString.includes("/shipments")) moduleKey = "shipments";
-        else if (urlString.includes("/expenses")) moduleKey = "expenses";
-        else if (urlString.includes("/invoices")) moduleKey = "invoices";
-        else if (urlString.includes("/vehicles")) moduleKey = "vehicles";
-        else if (urlString.includes("/drivers")) moduleKey = "drivers";
+        const extraKeys = [];
+        if (urlString.includes("/shipments")) {
+          moduleKey = "shipments";
+          extraKeys.push("vehicles", "drivers", "invoices", "dashboard");
+        } else if (urlString.includes("/expenses")) {
+          moduleKey = "expenses";
+          extraKeys.push("dashboard");
+        } else if (urlString.includes("/invoices")) {
+          moduleKey = "invoices";
+          extraKeys.push("dashboard");
+        } else if (urlString.includes("/vehicles")) {
+          moduleKey = "vehicles";
+          extraKeys.push("shipments", "dashboard");
+        } else if (urlString.includes("/drivers")) {
+          moduleKey = "drivers";
+          extraKeys.push("shipments", "dashboard");
+        }
 
         if (moduleKey) {
           await invalidateCachePrefix(moduleKey);
+        }
+        for (const key of extraKeys) {
+          await invalidateCachePrefix(key);
         }
         bustCache();
         // Dispatch event so UI can refresh silently

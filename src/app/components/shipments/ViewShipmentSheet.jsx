@@ -229,12 +229,11 @@ export function ViewShipmentSheet({ open, onOpenChange, shipment, onStatusChange
 
   const handleSaveDestinationPOD = async (destId, podData) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/shipments/${s._id}/status`, {
+      const res = await fetch(`${API_BASE_URL}/shipments/${s._id}/pod`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           destinationId: destId,
-          status: "Delivered",
           podReceiverName: podData.podReceiverName,
           podRemarks: podData.podRemarks,
           podImages: podData.podImages,
