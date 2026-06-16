@@ -62,74 +62,38 @@ export function HistoryShipmentSheet({ open, onOpenChange, historyShipments = []
 
   const isAllSelected = filtered.length > 0 && filtered.every((s) => selectedIds.includes(s._id));
 
-  const API_BASE_URL = import.meta.env?.VITE_API_URL || "http://localhost:5000/api";
+  const getRobustApiUrl = () => {
+    let raw = import.meta.env?.VITE_API_URL || "http://localhost:5000/api";
+    raw = raw.replace(/\/$/, "");
+    if (!raw.endsWith("/api")) {
+      raw += "/api";
+    }
+    return raw;
+  };
+  const API_BASE_URL = getRobustApiUrl();
 
-  // Export to Excel using xlsx
-  const handleExport = () => {
-    const selectedData = historyShipments.filter((s) => selectedIds.includes(s._id));
-
-    if (!selectedData.length) {
+  const handleExport = async () => {
+    if (!selectedIds.length) {
       alert("Please select at least one shipment from the list to export.");
       return;
     }
 
-    // Map data to clean Excel rows for all destinations of the selected shipments
-    const rows = selectedData.flatMap((s) => {
-      const destinations = s.destinations || [];
-      if (destinations.length === 0) {
-        return [
-          {
-            "LR Number": "—",
-            "Plant Number": "—",
-            "Shipment ID": s.shipmentId || "—",
-            "Dealer Name": "—",
-            "Location": "—",
-            "Destination Qty": 0,
-            "Destination Weight (kg)": 0,
-            "Driver Name": s.driverName || "—",
-            "Driver Phone": s.driverPhone || "",
-            "Vehicle Info": s.vehicleNumber || "—",
-            "Status": s.status === "Closed" ? "Delivered" : (s.status || "—"),
-            "Created Date": s.createdAt ? new Date(s.createdAt).toLocaleDateString("en-IN") : "—",
-            "Delivery Date": s.deliveryDate ? new Date(s.deliveryDate).toLocaleDateString("en-IN") : "—",
-          }
-        ];
-      }
-      return destinations.map((dest) => {
-        const destQty = dest.totalQuantity || (dest.totalTyres || 0) + (dest.totalTubes || 0) + (dest.totalFlaps || 0);
-        return {
-          "LR Number": dest.lrNumber || "—",
-          "Plant Number": dest.plantReferenceNumber || "—",
-          "Shipment ID": s.shipmentId || "—",
-          "Dealer Name": dest.customerName || "—",
-          "Location": dest.deliveryLocation || "—",
-          "Destination Qty": destQty,
-          "Destination Weight (kg)": dest.weightKg || 0,
-          "Driver Name": s.driverName || "—",
-          "Driver Phone": s.driverPhone || "",
-          "Vehicle Info": s.vehicleNumber || "—",
-          "Status": s.status === "Closed" ? "Delivered" : (s.status || "—"),
-          "Created Date": s.createdAt ? new Date(s.createdAt).toLocaleDateString("en-IN") : "—",
-          "Delivery Date": s.deliveryDate ? new Date(s.deliveryDate).toLocaleDateString("en-IN") : "—",
-        };
-      });
-    });
-
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Shipment History");
-
-    // Set column widths beautifully
-    const maxLens = {};
-    rows.forEach(row => {
-      Object.keys(row).forEach(key => {
-        const val = String(row[key] || "");
-        maxLens[key] = Math.max(maxLens[key] || 10, val.length + 3);
-      });
-    });
-    worksheet["!cols"] = Object.keys(maxLens).map(key => ({ wch: maxLens[key] }));
-
-    XLSX.writeFile(workbook, `GNXT_Delivered_Shipments_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    try {
+      const idsParam = selectedIds.join(",");
+      const res = await fetch(`${API_BASE_URL}/shipments/export?ids=${idsParam}`, { credentials: "include" });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.message || "Export failed"); }
+      const blob = await res.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `GNXT_Shipments_Export_${new Date().toISOString().slice(0, 10)}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    } catch (err) {
+      console.error("Export ZIP error:", err);
+      alert("Export failed: " + err.message);
+    }
   };
 
   return (

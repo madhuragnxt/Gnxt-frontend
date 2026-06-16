@@ -411,6 +411,10 @@ export function ExpensesPage() {
       const params = new URLSearchParams();
       if (filterDate) params.set("dateFrom", filterDate.toISOString());
       if (filterExpenseType !== "all") params.set("expenseType", filterExpenseType);
+      if (selectMode && selectedTripIds.size > 0) {
+        params.set("tripIds", Array.from(selectedTripIds).join(","));
+      }
+
       const res = await fetch(`${API_BASE_URL}/expenses/export?${params.toString()}`, { credentials: "include" });
       if (!res.ok) { const err = await res.json(); throw new Error(err.message || "Export failed"); }
       const blob = await res.blob();

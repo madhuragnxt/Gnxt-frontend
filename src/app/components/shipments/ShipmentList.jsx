@@ -107,11 +107,23 @@ export function ShipmentList() {
     return counts;
   }, [activeShipmentsOnly, filteredShipments.length]);
 
-  const API_BASE_URL = import.meta.env?.VITE_API_URL || "http://localhost:5000/api";
+  const getRobustApiUrl = () => {
+    let raw = import.meta.env?.VITE_API_URL || "http://localhost:5000/api";
+    raw = raw.replace(/\/$/, "");
+    if (!raw.endsWith("/api")) {
+      raw += "/api";
+    }
+    return raw;
+  };
+  const API_BASE_URL = getRobustApiUrl();
 
   const handleExport = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/shipments/export`, { credentials: "include" });
+      const params = new URLSearchParams();
+      if (statusFilter && statusFilter !== "all") params.set("status", statusFilter);
+      if (searchQuery) params.set("search", searchQuery);
+
+      const res = await fetch(`${API_BASE_URL}/shipments/export?${params.toString()}`, { credentials: "include" });
       if (!res.ok) { const err = await res.json(); throw new Error(err.message || "Export failed"); }
       const blob = await res.blob();
       const a = document.createElement("a");
