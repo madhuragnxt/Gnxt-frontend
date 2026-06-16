@@ -149,23 +149,28 @@ export function AddExpenseModal({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append("file", file);
+    if (file.size > 5 * 1024 * 1024) {
+      alert(`"${file.name}" exceeds the 5MB limit.`);
+      return;
+    }
 
     try {
       updateEntryField(entryId, "uploading", true);
-      const res = await fetch(`${import.meta.env?.VITE_API_URL || "http://localhost:5000/api"}/upload`, {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      if (data.url) {
-        updateEntryField(entryId, "receiptUrl", data.url);
-      }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        if (ev.target?.result) {
+          updateEntryField(entryId, "receiptUrl", ev.target.result);
+        }
+        updateEntryField(entryId, "uploading", false);
+      };
+      reader.onerror = () => {
+        alert("Failed to read file");
+        updateEntryField(entryId, "uploading", false);
+      };
+      reader.readAsDataURL(file);
     } catch (err) {
-      console.error("Upload error:", err);
-      alert("Failed to upload receipt");
-    } finally {
+      console.error("File processing error:", err);
+      alert("Failed to process file");
       updateEntryField(entryId, "uploading", false);
     }
   };

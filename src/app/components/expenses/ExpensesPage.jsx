@@ -9,6 +9,16 @@ import { EditExpenseModal } from "./EditExpenseModal";
 import { ViewExpenseDialog } from "./ViewExpenseDialog";
 import { ITEMS_PER_PAGE } from "./data/expensesData";
 
+const getRobustApiUrl = () => {
+  let raw = import.meta.env?.VITE_API_URL || "http://localhost:5000/api";
+  raw = raw.replace(/\/$/, "");
+  if (!raw.endsWith("/api")) {
+    raw += "/api";
+  }
+  return raw;
+};
+const API_BASE_URL = getRobustApiUrl();
+
 export function ExpensesPage() {
   const [expenses, setExpenses] = useState([]);
   const [shipments, setShipments] = useState([]);
@@ -47,11 +57,11 @@ export function ExpensesPage() {
     try {
       setLoading(true);
       const [expRes, shipRes] = await Promise.all([
-        fetch(`${import.meta.env?.VITE_API_URL || "http://localhost:5000/api"}/expenses`).catch(err => {
+        fetch(`${API_BASE_URL}/expenses`).catch(err => {
           console.error("Failed fetching expenses:", err);
           return { ok: false };
         }),
-        fetch(`${import.meta.env?.VITE_API_URL || "http://localhost:5000/api"}/shipments?limit=1000`).catch(err => {
+        fetch(`${API_BASE_URL}/shipments?limit=1000`).catch(err => {
           console.error("Failed fetching shipments:", err);
           return { ok: false };
         })
@@ -344,7 +354,7 @@ export function ExpensesPage() {
 
   const addExpense = async (newExpense) => {
     try {
-      const response = await fetch(`${import.meta.env?.VITE_API_URL || "http://localhost:5000/api"}/expenses`, {
+      const response = await fetch(`${API_BASE_URL}/expenses`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -369,7 +379,7 @@ export function ExpensesPage() {
 
   const updateExpense = async (id, payload) => {
     try {
-      const response = await fetch(`${import.meta.env?.VITE_API_URL || "http://localhost:5000/api"}/expenses/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/expenses/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -385,7 +395,7 @@ export function ExpensesPage() {
 
   const deleteExpense = async (id) => {
     try {
-      const response = await fetch(`${import.meta.env?.VITE_API_URL || "http://localhost:5000/api"}/expenses/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/expenses/${id}`, {
         method: "DELETE",
       });
       if (!response.ok) throw new Error("Failed to delete expense");
@@ -396,14 +406,12 @@ export function ExpensesPage() {
     }
   };
 
-  const API_BASE = import.meta.env?.VITE_API_URL || "http://localhost:5000/api";
-
   const handleExportZip = async () => {
     try {
       const params = new URLSearchParams();
       if (filterDate) params.set("dateFrom", filterDate.toISOString());
       if (filterExpenseType !== "all") params.set("expenseType", filterExpenseType);
-      const res = await fetch(`${API_BASE}/expenses/export?${params.toString()}`, { credentials: "include" });
+      const res = await fetch(`${API_BASE_URL}/expenses/export?${params.toString()}`, { credentials: "include" });
       if (!res.ok) { const err = await res.json(); throw new Error(err.message || "Export failed"); }
       const blob = await res.blob();
       const a = document.createElement("a");

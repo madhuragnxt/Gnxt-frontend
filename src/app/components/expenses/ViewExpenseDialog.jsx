@@ -127,7 +127,19 @@ export function ViewExpenseDialog({ expense, onClose }) {
               <Button
                 variant="outline"
                 className="w-full justify-between h-10 text-xs border-dashed border-border hover:text-[#1d4ed8] hover:border-[#1d4ed8]/30 group"
-                onClick={() => window.open(`${(import.meta.env?.VITE_API_URL || "http://localhost:5000/api").replace("/api", "")}${expense.receiptUrl}`, "_blank")}
+                onClick={() => {
+                  const url = expense.receiptUrl;
+                  if (url.startsWith("data:")) {
+                    const newWindow = window.open();
+                    if (newWindow) {
+                      newWindow.document.write(`<img src="${url}" style="max-width:100%; max-height:100vh; display:block; margin:auto;" />`);
+                      newWindow.document.title = "Receipt Preview";
+                    }
+                  } else {
+                    const base = (import.meta.env?.VITE_API_URL || "http://localhost:5000/api").replace(/\/api\/?$/, "");
+                    window.open(`${base}${url}`, "_blank");
+                  }
+                }}
               >
                 <div className="flex items-center gap-2">
                   <FileText className="w-3.5 h-3.5 text-muted-foreground group-hover:text-[#1d4ed8]" />

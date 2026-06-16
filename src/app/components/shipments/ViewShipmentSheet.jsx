@@ -10,7 +10,15 @@ import { ShipmentTimeline } from "./view/ShipmentTimeline";
 import { useAuth } from "../../context/AuthContext";
 import { getDisplayStatus } from "./utils/shipmentStyles";
 
-const API_BASE_URL = import.meta.env?.VITE_API_URL || "http://localhost:5000/api";
+const getRobustApiUrl = () => {
+  let raw = import.meta.env?.VITE_API_URL || "http://localhost:5000/api";
+  raw = raw.replace(/\/$/, "");
+  if (!raw.endsWith("/api")) {
+    raw += "/api";
+  }
+  return raw;
+};
+const API_BASE_URL = getRobustApiUrl();
 const GPS_POLL_MS = 10_000; // refresh GPS every 10 s while sheet is open
 
 const statusConfig = {
