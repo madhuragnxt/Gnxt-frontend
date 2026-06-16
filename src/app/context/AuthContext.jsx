@@ -5,18 +5,52 @@ const API = import.meta.env?.VITE_API_URL || "http://localhost:5000/api";
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(() => {
+    try {
+      const cached = localStorage.getItem("gnxt_user");
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [loading, setLoading] = useState(() => {
+    try {
+      const cached = localStorage.getItem("gnxt_user");
+      return !cached; // If we have a cached user, don't show full-page load
+    } catch {
+      return true;
+    }
+  });
 
   // Check session on mount
   useEffect(() => {
     fetch(`${API}/auth/me`, { credentials: "include" })
       .then((r) => r.json())
       .then((res) => {
-        if (res.success) setUser(res.data);
+        if (res.success) {
+          setUser(res.data);
+          localStorage.setItem("gnxt_user", JSON.stringify(res.data));
+        } else {
+          setUser(null);
+          localStorage.removeItem("gnxt_user");
+        }
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.warn("[AuthContext] Silent session validation failed:", err.message);
+        // Do NOT clear user on network failure, to support offline usage
+      })
       .finally(() => setLoading(false));
+  }, []);
+
+  // Listen for global unauthorized events to automatically clear local session
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setUser(null);
+      localStorage.removeItem("gnxt_user");
+    };
+    window.addEventListener("unauthorized-access", handleUnauthorized);
+    return () => window.removeEventListener("unauthorized-access", handleUnauthorized);
   }, []);
 
   const login = useCallback(async (username, password) => {
@@ -29,6 +63,7 @@ export function AuthProvider({ children }) {
     const data = await res.json();
     if (!data.success) throw new Error(data.message || "Login failed");
     setUser(data.user);
+    localStorage.setItem("gnxt_user", JSON.stringify(data.user));
     return data.user;
   }, []);
 
@@ -38,6 +73,7 @@ export function AuthProvider({ children }) {
       credentials: "include",
     }).catch(() => {});
     setUser(null);
+    localStorage.removeItem("gnxt_user");
   }, []);
 
   const hasGranularPermission = useCallback((key) => {

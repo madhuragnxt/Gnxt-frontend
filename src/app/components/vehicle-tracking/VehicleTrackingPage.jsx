@@ -52,9 +52,26 @@ export function VehicleTrackingPage() {
   // Helper: get local datetime-local string for default value (now)
   const nowLocalISO = () => {
     const now = new Date();
-    const offset = now.getTimezoneOffset();
-    const local = new Date(now.getTime() - offset * 60 * 1000);
-    return local.toISOString().slice(0, 16);
+    const pad = (n) => String(n).padStart(2, "0");
+    const yyyy = now.getFullYear();
+    const mm = pad(now.getMonth() + 1);
+    const dd = pad(now.getDate());
+    const hh = pad(now.getHours());
+    const min = pad(now.getMinutes());
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+  };
+
+  // Helper to parse "YYYY-MM-DDTHH:mm" strictly as local browser time
+  const parseLocalDatetime = (str) => {
+    if (!str) return new Date();
+    try {
+      const [datePart, timePart] = str.split("T");
+      const [year, month, day] = datePart.split("-").map(Number);
+      const [hours, minutes] = timePart.split(":").map(Number);
+      return new Date(year, month - 1, day, hours, minutes);
+    } catch (e) {
+      return new Date(str);
+    }
   };
 
   // Open the time picker dialog
@@ -69,10 +86,11 @@ export function VehicleTrackingPage() {
     if (!activeShipment || !selectedDateTime) return;
     setTimePickerOpen(false);
     try {
+      const isoDateTime = parseLocalDatetime(selectedDateTime).toISOString();
       const res = await fetch(`${API_BASE}/shipments/${activeShipment._id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "In Transit", dispatchDate: selectedDateTime }),
+        body: JSON.stringify({ status: "In Transit", dispatchDate: isoDateTime }),
       });
       const json = await res.json();
       if (json.success) {
@@ -92,10 +110,11 @@ export function VehicleTrackingPage() {
     if (!activeShipment || !selectedDateTime) return;
     setTimePickerOpen(false);
     try {
+      const isoDateTime = parseLocalDatetime(selectedDateTime).toISOString();
       const res = await fetch(`${API_BASE}/shipments/${activeShipment._id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "Closed", returnedDate: selectedDateTime }),
+        body: JSON.stringify({ status: "Closed", returnedDate: isoDateTime }),
       });
       const json = await res.json();
       if (json.success) {

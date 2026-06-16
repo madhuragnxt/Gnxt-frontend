@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Outlet, NavLink, useLocation, useNavigate } from "react-router";
 import {
   LayoutDashboard,
@@ -511,7 +511,14 @@ export function Layout() {
 
           {/* Page Content */}
           <main className="flex-1 overflow-auto relative">
-            <Outlet />
+            <Suspense fallback={
+              <div className="h-full w-full flex flex-col items-center justify-center bg-slate-50/50 gap-3">
+                <Loader2 className="w-8 h-8 text-[#1d4ed8] animate-spin" />
+                <span className="text-muted-foreground text-sm tracking-wide font-medium">Loading Page...</span>
+              </div>
+            }>
+              <Outlet />
+            </Suspense>
 
             <ProfileModal
               isOpen={profileModalOpen}

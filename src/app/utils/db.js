@@ -278,3 +278,17 @@ export async function optimisticUpdate(method, url, body) {
     console.error("[IndexedDB] Error applying optimistic update:", err);
   }
 }
+
+export async function clearApiCache() {
+  const db = await initDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("api-cache", "readwrite");
+    const store = tx.objectStore("api-cache");
+    const request = store.clear();
+    request.onsuccess = () => {
+      console.log("[IndexedDB] api-cache cleared.");
+      resolve();
+    };
+    request.onerror = () => reject(request.error);
+  });
+}

@@ -9,8 +9,17 @@ import {
   setCache,
   addToSyncQueue,
   optimisticUpdate,
-  invalidateCachePrefix
+  invalidateCachePrefix,
+  clearApiCache
 } from "./app/utils/db";
+
+// Detect page reload/refresh using Navigation API and clear API cache
+const isReload = window.performance && window.performance.getEntriesByType("navigation")[0]?.type === "reload";
+if (isReload) {
+  clearApiCache()
+    .then(() => console.log("[IndexedDB] Reload detected, API cache cleared."))
+    .catch((err) => console.error("[IndexedDB] Error clearing API cache:", err));
+}
 
 // Initialize IndexedDB on bootstrap
 initDb()
@@ -196,6 +205,10 @@ window.fetch = async (url, options = {}) => {
     if (navigator.onLine) {
       try {
         const response = await originalFetch(url, options);
+        if (response.status === 401 && !urlString.includes("/auth/me") && !urlString.includes("/auth/login")) {
+          localStorage.removeItem("gnxt_user");
+          window.dispatchEvent(new CustomEvent("unauthorized-access"));
+        }
         if (response.ok) {
           const clone = response.clone();
           const json = await clone.json();
@@ -253,6 +266,10 @@ window.fetch = async (url, options = {}) => {
   if (navigator.onLine) {
     try {
       const response = await originalFetch(url, options);
+      if (response.status === 401 && !urlString.includes("/auth/me") && !urlString.includes("/auth/login")) {
+        localStorage.removeItem("gnxt_user");
+        window.dispatchEvent(new CustomEvent("unauthorized-access"));
+      }
       if (response.ok) {
         // Clear caches of the corresponding module to ensure lists re-fetch fresh database updates
         let moduleKey = "";
