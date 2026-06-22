@@ -1,4 +1,4 @@
-import { ArrowLeft, Truck, RefreshCw, Check } from "lucide-react";
+import { ArrowLeft, Truck, RefreshCw, Check, X } from "lucide-react";
 import { useNavigate } from "react-router";
 import { Button } from "../ui/button";
 
@@ -7,6 +7,7 @@ export function VehicleTrackingHeader({
   ss,
   onDispatch,
   onReturn,
+  onCloseShipment,
   isPolling,
   lastPoll,
   onRefresh,
@@ -71,15 +72,26 @@ export function VehicleTrackingHeader({
           </Button>
         )}
 
-        {/* Awaiting Close — disabled button */}
-        {(activeShipment?.status === "In Transit" || activeShipment?.status === "Delivered") && (
+        {/* Delivered but not closed — Close Shipment button */}
+        {activeShipment?.status === "Delivered" && (
+          <Button
+            className="gap-2 h-9 bg-red-600 hover:bg-red-700 text-white cursor-pointer shadow-sm"
+            onClick={onCloseShipment}
+          >
+            <X className="w-3.5 h-3.5" />
+            Close Shipment
+          </Button>
+        )}
+
+        {/* Awaiting Closure — disabled button */}
+        {activeShipment?.status === "In Transit" && (
           <Button
             variant="outline"
             className="gap-2 h-9 border-amber-300 text-amber-700 bg-amber-50 cursor-not-allowed opacity-70"
             disabled
           >
             <Check className="w-3.5 h-3.5" />
-            Arrived / Vehicle Returned (Awaiting Close)
+            In Transit
           </Button>
         )}
 
@@ -90,7 +102,7 @@ export function VehicleTrackingHeader({
             onClick={onReturn}
           >
             <Check className="w-3.5 h-3.5" />
-            Arrived / Vehicle Returned
+            Mark Arrival (Manual Entry)
           </Button>
         )}
 

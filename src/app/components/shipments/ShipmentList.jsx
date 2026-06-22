@@ -128,7 +128,7 @@ export function ShipmentList() {
       const blob = await res.blob();
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = `GNXT_Shipments_Export_${new Date().toISOString().slice(0, 10)}.zip`;
+      a.download = `GNXT_Shipments_Export_${new Date().toISOString().slice(0, 10)}.xlsx`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -161,6 +161,7 @@ export function ShipmentList() {
 
       const res = await fetch(`${API_BASE_URL}/invoices/upload`, {
         method: "POST",
+        credentials: "include",
         body: formData,
       });
 

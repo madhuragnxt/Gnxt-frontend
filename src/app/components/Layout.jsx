@@ -8,8 +8,6 @@ import {
   Car,
   FileBarChart,
   Settings,
-  Bell,
-  Search,
   ChevronDown,
   MapPin,
   HelpCircle,
@@ -19,10 +17,6 @@ import {
   Wallet,
   ReceiptText,
   Loader2,
-  Wifi,
-  WifiOff,
-  Server,
-  ServerOff,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useOfflineSync } from "../context/OfflineSyncContext";
@@ -142,8 +136,9 @@ const REDIRECT_PAGES = [
 
 export function Layout() {
   const { user, loading, logout, isAuthenticated } = useAuth();
-  const { isOnline, isSyncing, pendingSyncCount } = useOfflineSync();
-  const { isBackendOnline, lastHealthCheck, socketClients } = useBackendHealth();
+  // Offline sync and backend health — logic is active in context; no UI badge displayed
+  useOfflineSync();
+  useBackendHealth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [activeShipmentsCount, setActiveShipmentsCount] = useState(null);
@@ -379,96 +374,6 @@ export function Layout() {
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Backend Health Indicator */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border select-none transition-all duration-300 ${
-                    isBackendOnline
-                      ? "bg-emerald-50/50 text-emerald-700 border-emerald-100"
-                      : "bg-red-50 text-red-700 border-red-200 animate-pulse"
-                  }`}>
-                    {isBackendOnline ? (
-                      <>
-                        <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                        </span>
-                        <Server className="w-3.5 h-3.5 text-emerald-600" />
-                        <span className="hidden md:inline text-emerald-600/80">API</span>
-                      </>
-                    ) : (
-                      <>
-                        <ServerOff className="w-3.5 h-3.5 text-red-600" />
-                        <span className="hidden md:inline text-red-600/80">API Down</span>
-                      </>
-                    )}
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-[220px] text-xs space-y-1">
-                  {isBackendOnline ? (
-                    <>
-                      <p className="font-medium text-emerald-700">Backend Connected</p>
-                      <p className="text-muted-foreground">{socketClients} socket client(s) connected</p>
-                      {lastHealthCheck && (
-                        <p className="text-muted-foreground">Last check: {lastHealthCheck.toLocaleTimeString()}</p>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <p className="font-medium text-red-700">Backend Unreachable</p>
-                      <p className="text-muted-foreground">The API server is not responding.</p>
-                      <p className="text-muted-foreground">Check if Render is awake or has crashed.</p>
-                    </>
-                  )}
-                </TooltipContent>
-              </Tooltip>
-
-              {/* Offline / Online Sync Indicator */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border select-none transition-all duration-300 ${
-                    !isOnline 
-                      ? "bg-amber-50 text-amber-700 border-amber-200" 
-                      : isSyncing 
-                        ? "bg-blue-50 text-blue-700 border-blue-200" 
-                        : "bg-emerald-50/50 text-emerald-700 border-emerald-100 hover:bg-emerald-50"
-                  }`}>
-                    {!isOnline ? (
-                      <>
-                        <WifiOff className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
-                        <span className="hidden md:inline">Offline Mode</span>
-                        {pendingSyncCount > 0 && (
-                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-[10px] text-white font-bold animate-pulse">
-                            {pendingSyncCount}
-                          </span>
-                        )}
-                      </>
-                    ) : isSyncing ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin" />
-                        <span className="hidden md:inline">Syncing Changes...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                        </span>
-                        <Wifi className="w-3.5 h-3.5 text-emerald-600" />
-                        <span className="hidden md:inline text-emerald-600/80">Online</span>
-                      </>
-                    )}
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-[240px] text-xs">
-                  {!isOnline 
-                    ? `You are offline. ${pendingSyncCount} changes saved locally. They will be pushed to MongoDB Atlas automatically when connection is restored.` 
-                    : isSyncing 
-                      ? "Synchronizing local database changes to the cloud Atlas database..." 
-                      : "System is online and running in hybrid mode. All changes are saved to the cloud."
-                  }
-                </TooltipContent>
-              </Tooltip>
 
               {/* Profile Dropdown */}
               <DropdownMenu>

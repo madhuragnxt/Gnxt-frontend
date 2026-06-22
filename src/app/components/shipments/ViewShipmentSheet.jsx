@@ -146,7 +146,7 @@ export function ViewShipmentSheet({ open, onOpenChange, shipment, onStatusChange
     setLiveGps(null);
     setGpsError(null);
     setLoadingDetail(true);
-    fetch(`${API_BASE_URL}/shipments/${shipment._id}`)
+    fetch(`${API_BASE_URL}/shipments/${shipment._id}`, { credentials: "include" })
       .then((r) => r.json())
       .then((res) => {
         if (res.success && res.data) {
@@ -165,7 +165,7 @@ export function ViewShipmentSheet({ open, onOpenChange, shipment, onStatusChange
   const fetchGps = useCallback(async (vehicleNo) => {
     if (!vehicleNo) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/gps/location/${encodeURIComponent(vehicleNo)}`);
+      const res = await fetch(`${API_BASE_URL}/gps/location/${encodeURIComponent(vehicleNo)}`, { credentials: "include" });
       const json = await res.json();
       if (json.success && json.data) {
         setLiveGps(json.data);
@@ -223,6 +223,7 @@ export function ViewShipmentSheet({ open, onOpenChange, shipment, onStatusChange
       const res = await fetch(`${API_BASE_URL}/shipments/${s._id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ status: newStatus }),
       });
       const result = await res.json();
@@ -240,6 +241,7 @@ export function ViewShipmentSheet({ open, onOpenChange, shipment, onStatusChange
       const res = await fetch(`${API_BASE_URL}/shipments/${s._id}/pod`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           destinationId: destId,
           podReceiverName: podData.podReceiverName,
@@ -265,6 +267,7 @@ export function ViewShipmentSheet({ open, onOpenChange, shipment, onStatusChange
       const res = await fetch(`${API_BASE_URL}/shipments/${s._id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           destinationId: destId,
           status: "Delivered",

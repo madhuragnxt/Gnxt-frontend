@@ -43,10 +43,7 @@ export function ShipmentHeader({ total, onCreateClick, onHistoryClick, onExport 
           <HistoryIcon />
           Shipment History
         </Button>
-        <Button onClick={onExport} variant="outline" className="gap-2 border-border text-foreground hover:bg-muted/60 cursor-pointer">
-          <DownloadIcon />
-          Export
-        </Button>
+
         {canCreate && (
           <Button onClick={onCreateClick} className="gap-2 bg-[#1d4ed8] hover:bg-[#1e40af] text-white shadow-sm cursor-pointer">
             <PlusIcon />

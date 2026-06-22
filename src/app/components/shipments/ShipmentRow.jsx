@@ -63,7 +63,7 @@ export function PlantRow({
   const handleDelete = async () => {
     if (!window.confirm(`Delete shipment ${shipment.shipmentId}?`)) return;
     try {
-      await fetch(`${API_BASE_URL}/shipments/${shipment._id}`, { method: "DELETE" });
+      await fetch(`${API_BASE_URL}/shipments/${shipment._id}`, { method: "DELETE", credentials: "include" });
       setShipmentData((prev) => prev.filter((s) => s._id !== shipment._id));
       if (onDeleted) onDeleted(shipment._id);
     } catch (err) {

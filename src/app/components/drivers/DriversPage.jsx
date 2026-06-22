@@ -58,6 +58,7 @@ export function DriversPage() {
       const res = await fetch(API_BASE_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(driverData),
       });
 
@@ -80,6 +81,7 @@ export function DriversPage() {
       const res = await fetch(`${API_BASE_URL}/${driverId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(driverData),
       });
 
@@ -102,6 +104,7 @@ export function DriversPage() {
       try {
         const res = await fetch(`${API_BASE_URL}/${driverId}`, {
           method: "DELETE",
+          credentials: "include",
         });
 
         if (!res.ok) {

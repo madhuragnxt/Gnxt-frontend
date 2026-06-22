@@ -247,7 +247,15 @@ export async function optimisticUpdate(method, url, body) {
               // Update item in list
               list = list.map(item => {
                 if (item._id === id || item.shipmentId === id) {
-                  return { ...item, ...parsedBody, updatedAt: new Date().toISOString() };
+                  const updatedItem = { ...item, ...parsedBody, updatedAt: new Date().toISOString() };
+                  if (moduleKey === "vehicles" && parsedBody.status !== undefined) {
+                    if (parsedBody.status === "Maintenance") {
+                      updatedItem.availability = "Unavailable";
+                    } else if (parsedBody.status === "Idle") {
+                      updatedItem.availability = "Available";
+                    }
+                  }
+                  return updatedItem;
                 }
                 return item;
               });

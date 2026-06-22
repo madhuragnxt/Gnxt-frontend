@@ -6,7 +6,7 @@ export function useKeepAlive() {
   const pongRef = useRef(null);
 
   useEffect(() => {
-    const INTERVAL_MS = 240000; // 4 min — survives browser background throttling
+    const INTERVAL_MS = 420000; // 7 min — survives browser background throttling
 
     const pingBackend = async () => {
       try {

@@ -13,29 +13,35 @@ export function VehicleDriverSection({
   vehicleId, setVehicleId,
   vehicleOpen, setVehicleOpen,
   driverId, setDriverId,
+  vehicles: propVehicles,
+  loadingV: propLoadingV,
 }) {
-  const [vehicles, setVehicles] = useState([]);
+  const [internalVehicles, setInternalVehicles] = useState([]);
   const [drivers, setDrivers]   = useState([]);
-  const [loadingV, setLoadingV] = useState(false);
+  const [internalLoadingV, setInternalLoadingV] = useState(false);
   const [loadingD, setLoadingD] = useState(false);
 
-  // Fetch own vehicles
+  const vehicles = propVehicles !== undefined ? propVehicles : internalVehicles;
+  const loadingV = propLoadingV !== undefined ? propLoadingV : internalLoadingV;
+
+  // Fetch own vehicles if not passed as prop
   useEffect(() => {
-    setLoadingV(true);
-    fetch(`${API_BASE_URL}/vehicles`)
+    if (propVehicles !== undefined) return;
+    setInternalLoadingV(true);
+    fetch(`${API_BASE_URL}/vehicles`, { credentials: "include" })
       .then((r) => r.json())
       .then((res) => {
         const list = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
-        setVehicles(list);
+        setInternalVehicles(list);
       })
-      .catch(() => setVehicles([]))
-      .finally(() => setLoadingV(false));
-  }, []);
+      .catch(() => setInternalVehicles([]))
+      .finally(() => setInternalLoadingV(false));
+  }, [propVehicles]);
 
   // Fetch drivers
   useEffect(() => {
     setLoadingD(true);
-    fetch(`${API_BASE_URL}/drivers`)
+    fetch(`${API_BASE_URL}/drivers`, { credentials: "include" })
       .then((r) => r.json())
       .then((res) => {
         const list = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];

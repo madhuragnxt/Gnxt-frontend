@@ -53,6 +53,8 @@ export function CreateShipmentSheet({ open, onOpenChange, onCreated, editShipmen
   const [vehicleId, setVehicleId] = useState("");
   const [vehicleOpen, setVehicleOpen] = useState(false);
   const [driverId, setDriverId] = useState("");
+  const [vehicles, setVehicles] = useState([]);
+  const [loadingV, setLoadingV] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [createdShipment, setCreatedShipment] = useState(null);
@@ -64,6 +66,17 @@ export function CreateShipmentSheet({ open, onOpenChange, onCreated, editShipmen
 
   useEffect(() => {
     if (!open) return;
+
+    // Fetch vehicles
+    setLoadingV(true);
+    fetch(`${API_BASE_URL}/vehicles`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((res) => {
+        const list = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+        setVehicles(list);
+      })
+      .catch(() => setVehicles([]))
+      .finally(() => setLoadingV(false));
 
     if (editShipment) {
       const entries = (editShipment.destinations ?? []).map((dest) => {
@@ -94,7 +107,7 @@ export function CreateShipmentSheet({ open, onOpenChange, onCreated, editShipmen
         setDriverId(draft.driverId || "");
         setHasDraft(true);
       }
-      fetch(`${API_BASE_URL}/shipments/next-id`)
+      fetch(`${API_BASE_URL}/shipments/next-id`, { credentials: "include" })
         .then((r) => r.json())
         .then((res) => { if (res.success) setNextIds(res.data); })
         .catch(() => { });
@@ -181,6 +194,17 @@ export function CreateShipmentSheet({ open, onOpenChange, onCreated, editShipmen
     if (!vehicleId) { setError("Please select a vehicle"); return; }
     if (!driverId) { setError("Please select a driver"); return; }
 
+    const selectedVehicle = vehicles.find((v) => v._id === vehicleId);
+    if (selectedVehicle) {
+      const vehicleCapacity = selectedVehicle.capacityKg || selectedVehicle.capacity || 0;
+      if (vehicleCapacity > 0 && totalWeight > vehicleCapacity) {
+        const proceed = window.confirm(
+          `Warning: Total weight of the shipment (${totalWeight} kg) exceeds the vehicle capacity (${vehicleCapacity} kg).\n\nDo you want to proceed?`
+        );
+        if (!proceed) return;
+      }
+    }
+
     setSubmitting(true);
     try {
       const payload = {
@@ -203,6 +227,7 @@ export function CreateShipmentSheet({ open, onOpenChange, onCreated, editShipmen
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(payload),
       });
 
@@ -341,6 +366,7 @@ export function CreateShipmentSheet({ open, onOpenChange, onCreated, editShipmen
                 vehicleId={vehicleId} setVehicleId={setVehicleId}
                 vehicleOpen={vehicleOpen} setVehicleOpen={setVehicleOpen}
                 driverId={driverId} setDriverId={setDriverId}
+                vehicles={vehicles} loadingV={loadingV}
               />
             </div>
 
@@ -352,7 +378,7 @@ export function CreateShipmentSheet({ open, onOpenChange, onCreated, editShipmen
                 totalFlapsAll={totalFlapsAll}
                 totalQuantity={totalQuantity}
                 totalWeight={totalWeight}
-                selectedVehicle={null}
+                selectedVehicle={vehicles.find((v) => v._id === vehicleId)}
               />
             </div>
             <div className="h-6" />

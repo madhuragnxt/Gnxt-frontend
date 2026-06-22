@@ -23,6 +23,11 @@ export function TripTrackingPage() {
   const [gpsLocations, setGpsLocations] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Arrival time picker state
+  const [arrivalPickerOpen, setArrivalPickerOpen] = useState(false);
+  const [arrivalShipmentId, setArrivalShipmentId] = useState(null);
+  const [arrivalDateTime, setArrivalDateTime] = useState("");
+
   useEffect(() => {
     fetchTripData();
   }, []);
@@ -53,18 +58,43 @@ export function TripTrackingPage() {
     }
   };
 
+  // Helper: get local datetime-local string
+  const nowLocalISO = () => {
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    const yyyy = now.getFullYear();
+    const mm = pad(now.getMonth() + 1);
+    const dd = pad(now.getDate());
+    const hh = pad(now.getHours());
+    const min = pad(now.getMinutes());
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+  };
+
+  // Helper to parse "YYYY-MM-DDTHH:mm" strictly as local browser time
+  const parseLocalDatetime = (str) => {
+    if (!str) return new Date();
+    try {
+      const [datePart, timePart] = str.split("T");
+      const [year, month, day] = datePart.split("-").map(Number);
+      const [hours, minutes] = timePart.split(":").map(Number);
+      return new Date(year, month - 1, day, hours, minutes);
+    } catch (e) {
+      return new Date(str);
+    }
+  };
+
   const getCombinedVehicles = () => {
     return vehicles.map(vehicle => {
-      // Find active shipment: not cancelled, and (not closed OR closed without returnedDate)
+      // Show all non-cancelled shipments (including Closed — arrival already submitted)
       const activeShipment = shipments.find(
-        s => s.vehicleNumber === vehicle.vehicleNo && s.status !== "Cancelled" && !(s.status === "Closed" && s.returnedDate)
+        s => s.vehicleNumber === vehicle.vehicleNo && s.status !== "Cancelled"
       );
 
       // Find GPS location for this vehicle
       const gps = gpsLocations.find(g => g.vehicleNo === vehicle.vehicleNo);
 
       const isDispatched = activeShipment?.status === "In Transit";
-      const isReturning = activeShipment?.status === "Delivered" || (activeShipment?.status === "Closed" && !activeShipment?.returnedDate);
+      const isReturning = activeShipment?.status === "Delivered";
 
       let finalStatus = "Idle";
       if (activeShipment) {
@@ -72,13 +102,17 @@ export function TripTrackingPage() {
           finalStatus = "Waiting for Dispatch";
         } else if (activeShipment.status === "In Transit") {
           finalStatus = "In Transit";
-        } else if (activeShipment.status === "Delivered" || activeShipment.status === "Closed") {
-          finalStatus = "Returning"; // Delivery done, vehicle heading back
+        } else         if (activeShipment.status === "Delivered") {
+          finalStatus = "Returning";
+        } else if (activeShipment.status === "Closed" && activeShipment.returnedDate) {
+          finalStatus = "Arrived";
+        } else if (activeShipment.status === "Closed") {
+          finalStatus = "Awaiting Arrival";
         } else {
           finalStatus = activeShipment.status;
         }
-      } else if (vehicle.status === "Assigned") {
-        finalStatus = "Waiting for Dispatch";
+      } else if (vehicle.status === "Assigned" || vehicle.status === "In Transit") {
+        finalStatus = "Idle";
       } else {
         finalStatus = vehicle.status || "Idle";
       }
@@ -92,6 +126,7 @@ export function TripTrackingPage() {
         shipmentId: activeShipment?.shipmentId || "---",
         shipmentDbId: activeShipment?._id || null,
         shipmentStatus: activeShipment?.status || null,
+        hasReturnedDate: !!activeShipment?.returnedDate,
         dealerName: activeShipment?.destinations?.[0]?.customerName || "---",
         dealerLocation: activeShipment?.destinations?.[0]?.deliveryLocation || "---",
         origin: "Mumbai Warehouse, Bhiwandi",
@@ -116,16 +151,24 @@ export function TripTrackingPage() {
 
   const combinedVehicles = getCombinedVehicles();
 
-  // Manual arrival handler — only in Trip Tracking page
+  // Manual arrival handler — opens time picker
   const handleMarkArrival = async (shipmentDbId) => {
     if (!shipmentDbId) return;
+    setArrivalShipmentId(shipmentDbId);
+    setArrivalDateTime("");
+    setArrivalPickerOpen(true);
+  };
+
+  // Confirm and submit arrival with manual time
+  const confirmArrival = async () => {
+    if (!arrivalShipmentId || !arrivalDateTime) return;
+    setArrivalPickerOpen(false);
     try {
-      const res = await axios.patch(`${API_BASE_URL}/shipments/${shipmentDbId}/status`, {
-        status: "Closed",
-        returnedDate: new Date().toISOString(),
+      const isoDateTime = parseLocalDatetime(arrivalDateTime).toISOString();
+      const res = await axios.patch(`${API_BASE_URL}/shipments/${arrivalShipmentId}/arrival`, {
+        arrivalTime: isoDateTime,
       });
       if (res.data?.success) {
-        // Refresh tracking data to reflect freed vehicle/driver
         fetchTripData();
       }
     } catch (err) {
@@ -160,6 +203,9 @@ export function TripTrackingPage() {
     all: combinedVehicles.length,
     "In Transit": combinedVehicles.filter((v) => v.status === "In Transit").length,
     "Waiting for Dispatch": combinedVehicles.filter((v) => v.status === "Waiting for Dispatch").length,
+    "Returning": combinedVehicles.filter((v) => v.status === "Returning").length,
+    "Awaiting Arrival": combinedVehicles.filter((v) => v.status === "Awaiting Arrival").length,
+    "Arrived": combinedVehicles.filter((v) => v.status === "Arrived").length,
     Idle: combinedVehicles.filter((v) => v.status === "Idle").length,
   };
 
@@ -193,6 +239,44 @@ export function TripTrackingPage() {
               onMarkArrival={handleMarkArrival}
             />
           </>
+        )}
+
+        {/* ── Arrival Time Picker Modal ───────────────────── */}
+        {arrivalPickerOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl border border-border w-full max-w-sm mx-4 p-6 space-y-5">
+              <div>
+                <h2 className="text-base font-semibold text-foreground">Set Arrival Time</h2>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Select the exact date and time the vehicle arrived back at the warehouse.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-700">Arrived At</label>
+                <input
+                  type="datetime-local"
+                  value={arrivalDateTime}
+                  onChange={(e) => setArrivalDateTime(e.target.value)}
+                  className="w-full h-10 rounded-lg border border-border bg-slate-50 px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#1d4ed8]/30 focus:border-[#1d4ed8] transition"
+                />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => setArrivalPickerOpen(false)}
+                  className="flex-1 h-9 rounded-lg border border-border text-sm text-muted-foreground hover:bg-muted/60 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={!arrivalDateTime}
+                  onClick={confirmArrival}
+                  className="flex-1 h-9 rounded-lg bg-[#1d4ed8] hover:bg-[#1e40af] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Confirm Arrival
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </TooltipProvider>

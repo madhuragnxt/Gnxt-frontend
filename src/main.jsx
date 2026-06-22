@@ -59,13 +59,11 @@ socket.on("disconnect", () => console.log("[Socket] Disconnected"));
 socket.on("reconnect", async () => {
   console.log("[Socket] Reconnected — refreshing all data");
   window.__cacheVersion = Date.now();
-  _revalidationTimers = {};
   window.dispatchEvent(new CustomEvent("api-cache-updated"));
 });
 
 function bustCache() {
   window.__cacheVersion = Date.now();
-  _revalidationTimers = {};
 }
 
 socket.on("shipments:changed", async () => {
@@ -136,27 +134,6 @@ function getActionName(method, url) {
 // Save the original fetch to bypass interceptor when fetching from network
 const originalFetch = window.fetch;
 
-// Stale-While-Revalidate: serve cached data instantly, refresh in background (debounced per URL)
-let _revalidationTimers = {};
-const revalidateCache = async (urlString) => {
-  const now = Date.now();
-  const last = _revalidationTimers[urlString];
-  if (last && now - last < 60_000) return; // skip if last revalidation was < 60s ago
-  _revalidationTimers[urlString] = now;
-  try {
-    const response = await originalFetch(urlString);
-    if (response.ok) {
-      const clone = response.clone();
-      const json = await clone.json();
-      json._cachedAt = Date.now();
-      await setCache(urlString, json);
-      window.dispatchEvent(new CustomEvent("api-cache-updated"));
-    }
-  } catch (err) {
-    console.warn("[SWR] Background revalidation failed:", urlString);
-  }
-};
-
 // Patch window.fetch globally to handle local caching, queueing, and hybrid synchronizations
 window.fetch = async (url, options = {}) => {
   const urlString = url.toString();
@@ -184,24 +161,8 @@ window.fetch = async (url, options = {}) => {
     return originalFetch(url, options);
   }
 
-  // Handle GET Requests — Stale-While-Revalidate (cache-first)
+  // Handle GET Requests — Network-First Strategy
   if (method === "GET") {
-    // Try cache first (instant)
-    const cached = await getCache(urlString);
-    // If cached, check it's not stale (cache was invalidated after this entry was stored)
-    const cacheVersion = window.__cacheVersion || Date.now();
-    const isStale = cached && cached._cachedAt && cached._cachedAt < cacheVersion;
-    if (cached && !isStale && navigator.onLine) {
-      // Fire background revalidation
-      revalidateCache(urlString);
-      return new Response(JSON.stringify(cached), {
-        status: 200,
-        statusText: "OK",
-        headers: { "Content-Type": "application/json" }
-      });
-    }
-
-    // No cache, stale, or offline — do network or fallback
     if (navigator.onLine) {
       try {
         const response = await originalFetch(url, options);
@@ -210,15 +171,19 @@ window.fetch = async (url, options = {}) => {
           window.dispatchEvent(new CustomEvent("unauthorized-access"));
         }
         if (response.ok) {
-          const clone = response.clone();
-          const json = await clone.json();
-          json._cachedAt = Date.now();
-          await setCache(urlString, json);
+          const contentType = response.headers.get("content-type") || "";
+          if (contentType.includes("application/json")) {
+            const clone = response.clone();
+            const json = await clone.json();
+            json._cachedAt = Date.now();
+            await setCache(urlString, json);
+          }
           return response;
         }
         return response;
       } catch (err) {
         console.warn("[Fetch Interceptor] GET network failed, trying cache:", urlString);
+        // Fallback to cache if network request throws (e.g. server unreachable while online)
         const cachedFallback = await getCache(urlString);
         if (cachedFallback) {
           return new Response(JSON.stringify(cachedFallback), {
@@ -227,7 +192,6 @@ window.fetch = async (url, options = {}) => {
             headers: { "Content-Type": "application/json" }
           });
         }
-        throw err;
       }
     } else {
       // Offline mode: Serve from IndexedDB
@@ -240,6 +204,7 @@ window.fetch = async (url, options = {}) => {
           headers: { "Content-Type": "application/json" }
         });
       }
+    }
 
       // Safe fallbacks for lists/views to prevent blank screen crashes
       let fallbackData = [];
@@ -259,7 +224,6 @@ window.fetch = async (url, options = {}) => {
         statusText: "OK",
         headers: { "Content-Type": "application/json" }
       });
-    }
   }
 
   // Handle Write Requests (POST, PUT, PATCH, DELETE)
@@ -304,10 +268,25 @@ window.fetch = async (url, options = {}) => {
       return response;
     } catch (err) {
       console.warn("[Fetch Interceptor] Write network failed, queuing operation:", urlString);
+      // DO NOT queue authentication requests
+      if (urlString.includes("/auth/")) {
+        return new Response(JSON.stringify({ success: false, message: "Network error: Unable to reach the server." }), {
+          status: 503,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
     }
   }
 
   // Offline Mode (or dropped network): Queue the request and perform an optimistic update on local caches
+  // DO NOT queue authentication requests
+  if (urlString.includes("/auth/")) {
+    return new Response(JSON.stringify({ success: false, message: "Network error: Unable to reach the authentication server." }), {
+      status: 503,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+
   console.log(`[Fetch Interceptor] Offline mode: queueing ${method} for ${urlString}`);
 
   let reqBody = options.body;

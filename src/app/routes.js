@@ -31,7 +31,7 @@ export const router = createBrowserRouter([
       { path: "invoices", Component: InvoicesPage },
       { path: "expenses", Component: ExpensesPage },
       { path: "settings", Component: SettingsPage },
-      { path: "help", Component: HelpSupportPage },
+      // { path: "help", Component: HelpSupportPage },
       { path: "*", Component: PlaceholderPage },
     ],
   },

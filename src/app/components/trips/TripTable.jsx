@@ -124,7 +124,7 @@ export function TripTable({ filteredVehicles, onNavigate }) {
                   {/* View Tracking Button */}
                   <TableCell className="pr-5 text-center">
                     <div className="flex items-center justify-end gap-2">
-                      {vehicle.shipmentStatus === "Closed" && (
+                      {vehicle.shipmentStatus && !vehicle.hasReturnedDate && vehicle.shipmentStatus !== "Cancelled" && (
                         <Button
                           size="sm"
                           className="gap-1.5 text-xs bg-amber-600 hover:bg-amber-700 text-white shadow-sm h-8 px-3"

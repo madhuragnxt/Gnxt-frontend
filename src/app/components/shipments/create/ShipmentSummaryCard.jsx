@@ -9,7 +9,8 @@ export function ShipmentSummaryCard({
   totalWeight,
   selectedVehicle,
 }) {
-  const overCapacity = selectedVehicle && totalWeight > selectedVehicle.capacity;
+  const vehicleCapacity = selectedVehicle ? (selectedVehicle.capacityKg || selectedVehicle.capacity || 0) : 0;
+  const overCapacity = selectedVehicle && totalWeight > vehicleCapacity;
 
   return (
     <div className="bg-[#fafbfc] border border-border rounded-xl p-5">
@@ -27,8 +28,8 @@ export function ShipmentSummaryCard({
           <div>
             <p className="text-sm font-medium">Weight exceeds vehicle capacity</p>
             <p className="text-xs text-red-600 mt-0.5">
-              Total weight ({totalWeight} kg) exceeds the selected vehicle capacity ({selectedVehicle?.capacity} kg) by{" "}
-              {totalWeight - (selectedVehicle?.capacity || 0)} kg. Please reduce items or select a larger vehicle.
+              Total weight ({totalWeight} kg) exceeds the selected vehicle capacity ({vehicleCapacity} kg) by{" "}
+              {totalWeight - vehicleCapacity} kg. Please reduce items or select a larger vehicle.
             </p>
           </div>
         </div>

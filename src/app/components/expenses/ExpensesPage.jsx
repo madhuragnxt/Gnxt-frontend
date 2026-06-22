@@ -57,11 +57,11 @@ export function ExpensesPage() {
     try {
       setLoading(true);
       const [expRes, shipRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/expenses`).catch(err => {
+        fetch(`${API_BASE_URL}/expenses`, { credentials: "include" }).catch(err => {
           console.error("Failed fetching expenses:", err);
           return { ok: false };
         }),
-        fetch(`${API_BASE_URL}/shipments?limit=1000`).catch(err => {
+        fetch(`${API_BASE_URL}/shipments?limit=1000`, { credentials: "include" }).catch(err => {
           console.error("Failed fetching shipments:", err);
           return { ok: false };
         })
@@ -359,6 +359,7 @@ export function ExpensesPage() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify(newExpense),
       });
 
@@ -382,6 +383,7 @@ export function ExpensesPage() {
       const response = await fetch(`${API_BASE_URL}/expenses/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(payload),
       });
       if (!response.ok) throw new Error("Failed to update expense");
@@ -397,6 +399,7 @@ export function ExpensesPage() {
     try {
       const response = await fetch(`${API_BASE_URL}/expenses/${id}`, {
         method: "DELETE",
+        credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to delete expense");
 
@@ -420,7 +423,7 @@ export function ExpensesPage() {
       const blob = await res.blob();
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = `GNXT_Expenses_Export_${new Date().toISOString().slice(0, 10)}.zip`;
+      a.download = `GNXT_Expenses_Export_${new Date().toISOString().slice(0, 10)}.xlsx`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -461,7 +464,8 @@ export function ExpensesPage() {
                 "Status": expense.status || "Pending",
                 "Date": expense.date ? new Date(expense.date).toLocaleDateString("en-IN") : "N/A",
                 "Dealer / Customer": group.customerName || "N/A",
-                "Total kg per shipment": group.totalWeightKg || 0
+                "Total kg per shipment": group.totalWeightKg || 0,
+                "Receipt Link": expense.receiptUrl ? `${API_BASE_URL}/expenses/${expense._id}/receipt` : ""
               });
             });
           } else {
@@ -477,7 +481,8 @@ export function ExpensesPage() {
               "Status": expense.status || "Pending",
               "Date": expense.date ? new Date(expense.date).toLocaleDateString("en-IN") : "N/A",
               "Dealer / Customer": group.customerName || "N/A",
-              "Total kg per shipment": group.totalWeightKg || 0
+              "Total kg per shipment": group.totalWeightKg || 0,
+              "Receipt Link": expense.receiptUrl ? `${API_BASE_URL}/expenses/${expense._id}/receipt` : ""
             });
           }
         });
@@ -485,6 +490,21 @@ export function ExpensesPage() {
     });
 
     const worksheet = XLSX.utils.json_to_sheet(flattenedRows);
+
+    // Make "Receipt Link" column clickable hyperlinks in SheetJS
+    for (let i = 0; i < flattenedRows.length; i++) {
+      const rowNum = i + 2;
+      const cellRef = `M${rowNum}`;
+      const url = flattenedRows[i]["Receipt Link"];
+      if (url) {
+        worksheet[cellRef] = {
+          t: "s",
+          v: "View Receipt",
+          l: { Target: url, Tooltip: "Click to open receipt" }
+        };
+      }
+    }
+
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Expenses");
 
@@ -501,7 +521,8 @@ export function ExpensesPage() {
       { wch: 15 }, // Status
       { wch: 15 }, // Date
       { wch: 25 }, // Customer
-      { wch: 20 }  // Total Kg
+      { wch: 20 }, // Total Kg
+      { wch: 18 }  // Receipt Link
     ];
     worksheet['!cols'] = wscols;
 

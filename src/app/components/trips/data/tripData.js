@@ -56,4 +56,19 @@ export const statusStyles = {
     text: "text-orange-700",
     dot: "bg-orange-400",
   },
+  Arrived: {
+    bg: "bg-green-50 border-green-200",
+    text: "text-green-700",
+    dot: "bg-green-500",
+  },
+  "Awaiting Arrival": {
+    bg: "bg-amber-50 border-amber-200",
+    text: "text-amber-700",
+    dot: "bg-amber-500 animate-pulse",
+  },
+  Driving: {
+    bg: "bg-emerald-50 border-emerald-200",
+    text: "text-emerald-700",
+    dot: "bg-emerald-500",
+  },
 };

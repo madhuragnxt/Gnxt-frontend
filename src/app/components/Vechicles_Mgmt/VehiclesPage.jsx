@@ -40,7 +40,7 @@ export function VehiclesPage() {
   const fetchVehicles = async () => {
     setLoading(true);
     try {
-      const res = await fetch(API_BASE_URL);
+      const res = await fetch(API_BASE_URL, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch vehicles");
       const data = await res.json();
       setVehicles(data);
@@ -88,6 +88,7 @@ export function VehiclesPage() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({
           vehicleNo: newVehicle.vehicleNo,
           type: newVehicle.type,
@@ -137,12 +138,12 @@ export function VehiclesPage() {
   const handleEditVehicle = (vehicle) => {
     setEditingVehicle(vehicle);
     setNewVehicle({
-      vehicleNo: vehicle.vehicleNo,
-      type: vehicle.type,
-      model: vehicle.model,
-      capacityKg: vehicle.capacityKg.toString(),
-      insuranceExpiry: vehicle.insuranceExpiry.split("T")[0],
-      ownership: vehicle.ownership,
+      vehicleNo: vehicle.vehicleNo || "",
+      type: vehicle.type || "",
+      model: vehicle.model || "",
+      capacityKg: vehicle.capacityKg != null ? vehicle.capacityKg.toString() : "",
+      insuranceExpiry: vehicle.insuranceExpiry ? vehicle.insuranceExpiry.split("T")[0] : "",
+      ownership: vehicle.ownership || "",
     });
     setAddSheetOpen(true);
   };
@@ -156,6 +157,7 @@ export function VehiclesPage() {
     try {
       const res = await fetch(`${API_BASE_URL}/${vehicleId}`, {
         method: "DELETE",
+        credentials: "include",
       });
 
       if (!res.ok) {
@@ -181,6 +183,7 @@ export function VehiclesPage() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({ status: newStatus }),
       });
 

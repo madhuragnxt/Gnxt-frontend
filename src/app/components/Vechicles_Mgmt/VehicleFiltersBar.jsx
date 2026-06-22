@@ -45,7 +45,6 @@ export default function VehicleFiltersBar({
             <SelectItem value="In Transit">In Transit</SelectItem>
             <SelectItem value="Idle">Idle</SelectItem>
             <SelectItem value="Maintenance">Maintenance</SelectItem>
-            <SelectItem value="Breakdown">Breakdown</SelectItem>
           </SelectContent>
         </Select>
 

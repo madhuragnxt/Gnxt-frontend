@@ -1,4 +1,4 @@
-import { Plus, Download, CalendarDays, CheckSquare, Square, FileArchive } from "lucide-react";
+import { Plus, CalendarDays, CheckSquare, Square, FileArchive } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "../ui/button";
 import {
@@ -109,18 +109,9 @@ export function ExpenseHeader({
           className="border-border gap-2 hover:bg-[#f8f9fb]"
         >
           <FileArchive className="w-4 h-4 text-muted-foreground" />
-          Download with Receipts
+          Export with Receipts
         </Button>
-        <Button
-          onClick={onExport}
-          variant="outline"
-          className="border-border gap-2 hover:bg-[#f8f9fb]"
-        >
-          <Download className="w-4 h-4 text-muted-foreground" />
-          {selectMode && selectedCount > 0 
-            ? `Export Selected (${selectedCount})` 
-            : "Export to Excel"}
-        </Button>
+
         <Button
           onClick={onAddExpense}
           className="bg-[#1d4ed8] hover:bg-[#1e40af] text-white gap-2 shadow-sm"

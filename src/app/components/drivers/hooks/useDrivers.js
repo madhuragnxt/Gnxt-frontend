@@ -11,7 +11,7 @@ export function useDrivers() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(API_BASE_URL);
+      const res = await fetch(API_BASE_URL, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch drivers");
       const data = await res.json();
       setDrivers(data);

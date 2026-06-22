@@ -85,7 +85,7 @@ export function HistoryShipmentSheet({ open, onOpenChange, historyShipments = []
       const blob = await res.blob();
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = `GNXT_Shipments_Export_${new Date().toISOString().slice(0, 10)}.zip`;
+      a.download = `GNXT_Shipments_Export_${new Date().toISOString().slice(0, 10)}.xlsx`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -124,7 +124,7 @@ export function HistoryShipmentSheet({ open, onOpenChange, historyShipments = []
                     if (window.confirm(`Are you sure you want to delete ${selectedIds.length} shipments from history?`)) {
                       for (const id of selectedIds) {
                         try {
-                          await fetch(`${API_BASE_URL}/shipments/${id}`, { method: "DELETE" });
+                          await fetch(`${API_BASE_URL}/shipments/${id}`, { method: "DELETE", credentials: "include" });
                         } catch (e) {
                           console.error("Failed to delete", id, e);
                         }

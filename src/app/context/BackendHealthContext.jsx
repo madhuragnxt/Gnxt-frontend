@@ -9,7 +9,7 @@ export function BackendHealthProvider({ children }) {
   const [isBackendOnline, setIsBackendOnline] = useState(true);
   const [lastHealthCheck, setLastHealthCheck] = useState(null);
   const [socketClients, setSocketClients] = useState(0);
-  const [checkInterval, setCheckInterval] = useState(30000);
+  const [checkInterval, setCheckInterval] = useState(420000);
   const wasOffline = useRef(false);
   const intervalRef = useRef(null);
 

@@ -180,6 +180,7 @@ const MODULE_PERMISSIONS = [
 
 const ROLES = [
   { name: "Super Admin", desc: "Full system access including user management" },
+  { name: "Sub Admin", desc: "Manually configured administrative access" },
   { name: "Billing Executive (Invoice Operator)", desc: "Manage billing and invoices" },
   { name: "Operations Supervisor", desc: "Manage logistics and vehicle operations" },
   { name: "Accounts Executive", desc: "Manage financial data and reporting" },
@@ -1158,7 +1159,7 @@ export function SettingsPage() {
                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                 className="w-full h-10 bg-white border border-slate-200 rounded-xl px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1d4ed8]"
               >
-                {ROLES.map((r) => (
+                {ROLES.filter((r) => r.name !== "Super Admin").map((r) => (
                   <option key={r.name} value={r.name}>{r.name}</option>
                 ))}
               </select>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams } from "react-router";
+import { useLocation } from "react-router";
 import { statusStyles } from "./data/vehicleTrackingData";
 import { VehicleTrackingHeader } from "./VehicleTrackingHeader";
 import { KpiCards }              from "./KpiCards";
@@ -10,7 +10,8 @@ const API_BASE = import.meta.env?.VITE_API_URL || "http://localhost:5000/api";
 const POLL_INTERVAL_MS = 420_000; // poll every 7 min; real-time via socket events
 
 export function VehicleTrackingPage() {
-  const { vehicleId } = useParams();
+  const location = useLocation();
+  const vehicleId = location.pathname.split("/").filter(Boolean).pop();
   const [dispatched, setDispatched]   = useState(false);
   const [activeShipment, setActiveShipment] = useState(null);
   const [isPolling, setIsPolling]     = useState(false);
@@ -25,7 +26,7 @@ export function VehicleTrackingPage() {
   // Fetch active shipment for this vehicle from MongoDB
   const fetchActiveShipment = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/shipments?limit=100`);
+      const res = await fetch(`${API_BASE}/shipments?limit=100`, { credentials: "include" });
       const json = await res.json();
       if (json.success && json.data) {
         // Find active shipment: not cancelled, and (not closed OR closed without returnedDate)
@@ -77,7 +78,7 @@ export function VehicleTrackingPage() {
   // Open the time picker dialog
   const openTimePicker = (mode) => {
     setTimePickerMode(mode);
-    setSelectedDateTime(nowLocalISO());
+    setSelectedDateTime(mode === "dispatch" ? nowLocalISO() : "");
     setTimePickerOpen(true);
   };
 
@@ -90,6 +91,7 @@ export function VehicleTrackingPage() {
       const res = await fetch(`${API_BASE}/shipments/${activeShipment._id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ status: "In Transit", dispatchDate: isoDateTime }),
       });
       const json = await res.json();
@@ -111,21 +113,45 @@ export function VehicleTrackingPage() {
     setTimePickerOpen(false);
     try {
       const isoDateTime = parseLocalDatetime(selectedDateTime).toISOString();
-      const res = await fetch(`${API_BASE}/shipments/${activeShipment._id}/status`, {
+      const res = await fetch(`${API_BASE}/shipments/${activeShipment._id}/arrival`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "Closed", returnedDate: isoDateTime }),
+        credentials: "include",
+        body: JSON.stringify({ arrivalTime: isoDateTime }),
       });
       const json = await res.json();
       if (json.success) {
         setActiveShipment(json.data);
-        alert("Vehicle successfully checked back in! Driver and vehicle are now available.");
+        alert("Vehicle arrival recorded successfully!");
       } else {
-        alert(json.message || "Checking-in failed");
+        alert(json.message || "Recording arrival failed");
       }
     } catch (err) {
-      console.error("Check-in failed:", err);
-      alert("Error registering vehicle return");
+      console.error("Recording arrival failed:", err);
+      alert("Error recording vehicle arrival");
+    }
+  };
+
+  // Close shipment without setting arrival time
+  const closeShipment = async () => {
+    if (!activeShipment) return;
+    try {
+      const res = await fetch(`${API_BASE}/shipments/${activeShipment._id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ status: "Closed" }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setActiveShipment(json.data);
+        alert("Shipment closed. Now mark arrival when vehicle returns.");
+      } else {
+        alert(json.message || "Closing shipment failed");
+      }
+    } catch (err) {
+      console.error("Closing shipment failed:", err);
+      alert("Error closing shipment");
     }
   };
 
@@ -171,7 +197,7 @@ export function VehicleTrackingPage() {
       detail: isInTransit ? "Vehicle is actively in transit towards the destination." : null
     });
 
-    // 4. Cargo Delivered (Delivered or Closed)
+    // 4. Cargo Delivered
     const isDelivered = activeShipment.status === "Delivered" || activeShipment.status === "Closed";
     timeline.push({
       step: "Cargo Delivered",
@@ -179,19 +205,29 @@ export function VehicleTrackingPage() {
         ? new Date(activeShipment.deliveryDate).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
         : "---",
       completed: isDelivered,
-      active: activeShipment.status === "Delivered" || activeShipment.status === "Closed",
+      active: activeShipment.status === "Delivered",
     });
 
-    // 5. Closed (Completed upon clicking returned/closed button)
+    // 5. Shipment Closed (administrative closure, no time required)
     const isClosed = activeShipment.status === "Closed";
     timeline.push({
-      step: "Closed",
+      step: "Shipment Closed",
+      timestamp: isClosed ? "Closed" : "---",
+      completed: isClosed,
+      active: isClosed && !activeShipment.returnedDate,
+      detail: isClosed && !activeShipment.returnedDate ? "Shipment closed. Waiting for arrival time entry." : null
+    });
+
+    // 6. Arrival Recorded (manual time entry by user)
+    const hasArrived = isClosed && !!activeShipment.returnedDate;
+    timeline.push({
+      step: "Arrival Recorded",
       timestamp: activeShipment.returnedDate
         ? new Date(activeShipment.returnedDate).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
         : "---",
-      completed: isClosed,
+      completed: hasArrived,
       active: false,
-      detail: isClosed ? "Vehicle arrived back at factory/warehouse. Available." : null
+      detail: hasArrived ? "Vehicle arrived back at factory/warehouse. Available." : null
     });
   }
 
@@ -201,7 +237,12 @@ export function VehicleTrackingPage() {
     driverName: activeShipment?.driverName || "Unknown",
     driverPhone: activeShipment?.driverPhone || "---",
     status: activeShipment 
-      ? (activeShipment.status === "Pending" ? "Waiting for Dispatch" : (activeShipment.status === "In Transit" ? "In Transit" : activeShipment.status)) 
+      ? (activeShipment.status === "Pending" ? "Waiting for Dispatch" 
+        : activeShipment.status === "In Transit" ? "In Transit" 
+        : activeShipment.status === "Delivered" ? "Delivered"
+        : activeShipment.status === "Closed" && !activeShipment.returnedDate ? "Awaiting Arrival"
+        : activeShipment.status === "Closed" ? "Arrived"
+        : activeShipment.status) 
       : "Idle",
     shipmentId: activeShipment?.shipmentId || "---",
     dealerName: activeShipment?.destinations?.[0]?.customerName || "---",
@@ -239,6 +280,7 @@ export function VehicleTrackingPage() {
         ss={ss}
         onDispatch={() => openTimePicker("dispatch")}
         onReturn={() => openTimePicker("arrival")}
+        onCloseShipment={closeShipment}
         isPolling={isPolling}
         lastPoll={lastPoll}
         onRefresh={triggerRefresh}

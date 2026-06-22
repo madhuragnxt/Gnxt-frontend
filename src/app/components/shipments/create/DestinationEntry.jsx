@@ -33,7 +33,7 @@ export function DestinationEntry({
   // Fetch plant numbers on mount
   useEffect(() => {
     setLoadingPlants(true);
-    fetch(`${API_BASE_URL}/shipments/plant-numbers`)
+    fetch(`${API_BASE_URL}/shipments/plant-numbers`, { credentials: "include" })
       .then((r) => r.json())
       .then((res) => setPlantNumbers(res.success ? res.data : []))
       .catch(() => setPlantNumbers([]))
@@ -53,7 +53,7 @@ export function DestinationEntry({
 
     Promise.all(
       currentPlants.map((plant) =>
-        fetch(`${API_BASE_URL}/shipments/invoices-by-plant/${encodeURIComponent(plant)}`)
+        fetch(`${API_BASE_URL}/shipments/invoices-by-plant/${encodeURIComponent(plant)}`, { credentials: "include" })
           .then((r) => r.json())
           .then((res) => (res.success ? res.data : []))
           .catch(() => [])
@@ -128,7 +128,7 @@ export function DestinationEntry({
   // Fetch related plants when primary plant changes
   useEffect(() => {
     if (!entry.plantReferenceNumber) { setRelatedPlants([]); return; }
-    fetch(`${API_BASE_URL}/shipments/related-plants/${encodeURIComponent(entry.plantReferenceNumber)}`)
+    fetch(`${API_BASE_URL}/shipments/related-plants/${encodeURIComponent(entry.plantReferenceNumber)}`, { credentials: "include" })
       .then((r) => r.json())
       .then((res) => setRelatedPlants(res.success ? res.data : []))
       .catch(() => setRelatedPlants([]));
