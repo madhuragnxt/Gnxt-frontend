@@ -1,7 +1,7 @@
 // Service Worker for caching static assets and handling client-side SPA navigation offline.
 const CACHE_NAME = "gnxt-static-assets-v2"; // bump to clear old cache
 
-const SW_VERSION = 2; // Bump to force re-install and clear old caches
+const SW_VERSION = 3; // Bump to force re-install and clear old caches
 
 // Simple install event
 self.addEventListener("install", (event) => {

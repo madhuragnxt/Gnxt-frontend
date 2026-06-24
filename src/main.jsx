@@ -26,15 +26,15 @@ initDb()
   .then(() => console.log("[Bootstrap] IndexedDB initialized."))
   .catch((err) => console.error("[Bootstrap] IndexedDB init failed:", err));
 
-// Register Service Worker for static files and offline page shell
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker
-      .register("/sw.js")
-      .then((reg) => console.log("[Service Worker] Registered with scope:", reg.scope))
-      .catch((err) => console.error("[Service Worker] Registration failed:", err));
-  });
-}
+// Service Worker disabled during development to prevent stale cache issues.
+// if ("serviceWorker" in navigator) {
+//   window.addEventListener("load", () => {
+//     navigator.serviceWorker
+//       .register("/sw.js")
+//       .then((reg) => console.log("[Service Worker] Registered with scope:", reg.scope))
+//       .catch((err) => console.error("[Service Worker] Registration failed:", err));
+//   });
+// }
 
 // ── Socket.io connection ────────────────────────────────
 const API_BASE_URL = import.meta.env?.VITE_API_URL || "http://localhost:5000/api";
