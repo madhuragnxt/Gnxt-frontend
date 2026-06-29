@@ -37,7 +37,7 @@ initDb()
 // }
 
 // ── Socket.io connection ────────────────────────────────
-const API_BASE_URL = import.meta.env?.VITE_API_URL || "http://localhost:5000/api";
+const API_BASE_URL = (import.meta.env?.VITE_API_URL || "http://localhost:5000/api").replace("backend-46iu.onrender.com", "backend-zm55.onrender.com");
 const SOCKET_URL = API_BASE_URL.replace("/api", "");
 const socket = io(SOCKET_URL, {
   transports: ["websocket", "polling"],
@@ -136,8 +136,12 @@ const originalFetch = window.fetch;
 
 // Patch window.fetch globally to handle local caching, queueing, and hybrid synchronizations
 window.fetch = async (url, options = {}) => {
-  const urlString = url.toString();
+  let urlString = url.toString();
   const method = options.method?.toUpperCase() || "GET";
+
+  // Rewrite old backend URL to new one (fixes Vercel env var override)
+  urlString = urlString.replace("https://backend-46iu.onrender.com", "https://backend-zm55.onrender.com");
+  if (urlString !== url.toString()) url = urlString;
 
   // Bypass interceptor if:
   // - It's not an API call (e.g. static files, bundle scripts)
