@@ -37,8 +37,9 @@ initDb()
 // }
 
 // ── Socket.io connection ────────────────────────────────
-const API_BASE_URL = (import.meta.env?.VITE_API_URL || "http://localhost:5000/api").replace("backend-46iu.onrender.com", "backend-zm55.onrender.com");
-const SOCKET_URL = API_BASE_URL.replace("/api", "");
+const _rawApi = (import.meta.env?.VITE_API_URL || "http://localhost:5000/api").replace(/\/+$/, "").replace("backend-46iu.onrender.com", "backend-zm55.onrender.com");
+const API_BASE_URL = _rawApi.endsWith("/api") ? _rawApi : _rawApi + "/api";
+const SOCKET_URL = API_BASE_URL.endsWith("/api") ? API_BASE_URL.slice(0, -4) : API_BASE_URL;
 const socket = io(SOCKET_URL, {
   transports: ["websocket", "polling"],
   autoConnect: true,
