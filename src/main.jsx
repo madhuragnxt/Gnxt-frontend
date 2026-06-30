@@ -37,7 +37,7 @@ initDb()
 // }
 
 // ── Socket.io connection ────────────────────────────────
-const _rawApi = (import.meta.env?.VITE_API_URL || "http://localhost:5000/api").replace(/\/+$/, "").replace("backend-46iu.onrender.com", "backend-zm55.onrender.com");
+const _rawApi = (import.meta.env?.VITE_API_URL || "http://localhost:5000/api").replace(/\/+$/, "").replace("backend-46iu.onrender.com", "gnxt-backend.onrender.com").replace("backend-zm55.onrender.com", "gnxt-backend.onrender.com");
 const API_BASE_URL = _rawApi.endsWith("/api") ? _rawApi : _rawApi + "/api";
 const SOCKET_URL = API_BASE_URL.endsWith("/api") ? API_BASE_URL.slice(0, -4) : API_BASE_URL;
 const socket = io(SOCKET_URL, {
@@ -141,7 +141,7 @@ window.fetch = async (url, options = {}) => {
   const method = options.method?.toUpperCase() || "GET";
 
   // Rewrite old backend URL to new one (fixes Vercel env var override)
-  urlString = urlString.replace("https://backend-46iu.onrender.com", "https://backend-zm55.onrender.com");
+  urlString = urlString.replace("https://backend-46iu.onrender.com", "https://gnxt-backend.onrender.com").replace("https://backend-zm55.onrender.com", "https://gnxt-backend.onrender.com");
   if (urlString !== url.toString()) url = urlString;
 
   // Bypass interceptor if:
